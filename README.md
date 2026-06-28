@@ -97,17 +97,24 @@ keep working without a code change.
 
 ---
 
-## Building
+## Download / Building
 
-Requires a JDK 17+ and internet access to the Paper Maven repository.
+**Prebuilt jar:** a ready-to-use build is committed at
+[`dist/LumenEssentials-1.0.0.jar`](dist/LumenEssentials-1.0.0.jar). Download it and
+drop it straight into your server's `plugins/` folder — no build step required. It
+targets Java 17 bytecode and is compiled against the Bukkit/Paper API the server
+provides at runtime.
+
+**Building from source** (optional) requires a JDK 17+ and access to the Paper Maven
+repository:
 
 ```bash
 gradle build
 ```
 
-The shaded jar is produced at `build/libs/LumenEssentials.jar`. To add a committed
-Gradle wrapper for reproducible builds, run `gradle wrapper` once in an environment
-with access to `services.gradle.org`, then use `./gradlew build`.
+The jar is produced at `build/libs/LumenEssentials.jar`. To add a committed Gradle
+wrapper for reproducible builds, run `gradle wrapper` once in an environment with
+access to `services.gradle.org`, then use `./gradlew build`.
 
 > The build compiles against `io.papermc.paper:paper-api` from
 > `https://repo.papermc.io`. In restricted/offline CI environments that repo may be
