@@ -57,39 +57,21 @@ teleport:
   message-request-received: "&e{player} &7wants to teleport to you. &a/tpaccept&7."
 
 # ---------------------------------------------------------------------
-# Random teleport. Regional presets are named spawn anchors in the
-# survival world; /rtp picks a random one. Designed to be lag-safe:
-# candidate locations are validated against the highest block and a
-# bounded number of attempts is used per request.
+# Random teleport. /rtp scatters the player around a center point in the
+# survival world. Designed to be lag-safe: candidate locations are
+# validated against the highest block and a bounded number of attempts is
+# used per request.
 # ---------------------------------------------------------------------
 rtp:
   enabled: true
   # World RTP operates in (set with /rtpworld <world>).
   world: world
-  # Maximum radius from a region center (set with /rtpamount <blocks>).
+  # Center point RTP scatters around.
+  center-x: 0
+  center-z: 0
+  # Maximum radius from the center (set with /rtpamount <blocks>).
   max-radius: 5000
   min-radius: 250
   cooldown-seconds: 30
   # Max safe-location search attempts before giving up (keeps it cheap).
   max-attempts: 30
-  # Region centers (x,z) in the RTP world. /rtp <region> uses the matching
-  # center; /rtp alone picks one at random.
-  regions:
-    europe: { x: 0, z: 0 }
-    northamerica: { x: 10000, z: 0 }
-    oceania: { x: 0, z: 10000 }
-    asia: { x: -10000, z: 0 }
-
-# ---------------------------------------------------------------------
-# Warps. Lobby/spawn destinations set by operators with /sswarp <name>.
-# Stored in warps.yml. /warp spawn supports regional sub-presets named
-# spawn_<region> (e.g. /warp spawn asia -> warp "spawn_asia").
-# ---------------------------------------------------------------------
-warps:
-  # The default region used by /warp spawn when no region is given.
-  default-spawn-region: europe
-  spawn-regions:
-    - europe
-    - northamerica
-    - oceania
-    - asia

@@ -26,15 +26,15 @@ commands:
     permission: lumen.stats
   warp:
     description: Warp to a configured location.
-    usage: /warp <name> [region]
+    usage: /warp <name>
     permission: lumen.warp
   sswarp:
     description: Set a warp at your location.
     usage: /sswarp <name>
     permission: lumen.warp.admin
   rtp:
-    description: Randomly teleport (optionally by region).
-    usage: /rtp [region]
+    description: Randomly teleport around the survival world.
+    usage: /rtp
     permission: lumen.rtp
   rtpworld:
     description: Set the RTP world.

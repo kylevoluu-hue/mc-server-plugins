@@ -132,21 +132,6 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
             return true;
         }
         String warpName = args[0].toLowerCase(Locale.ROOT);
-
-        // /warp spawn [region] resolves to the region-specific spawn anchor.
-        if (warpName.equals("spawn")) {
-            String region = args.length >= 2
-                    ? args[1].toLowerCase(Locale.ROOT)
-                    : plugin.warpManager().defaultSpawnRegion();
-            String regional = "spawn_" + region;
-            if (plugin.warpManager().exists(regional)) {
-                warpName = regional;
-            } else if (!plugin.warpManager().exists("spawn")) {
-                MessageUtil.send(sender, "&cSpawn is not configured. Ask an operator to set it.");
-                return true;
-            }
-        }
-
         Location destination = plugin.warpManager().get(warpName);
         if (destination == null) {
             MessageUtil.send(sender, "&cUnknown warp. Available: &f"
@@ -165,14 +150,11 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
             return true;
         }
         if (args.length == 0) {
-            MessageUtil.send(sender, "&cUsage: /sswarp <name>  (or: /sswarp spawn <region>)");
+            MessageUtil.send(sender, "&cUsage: /sswarp <name>");
             return true;
         }
         Player player = (Player) sender;
         String name = args[0].toLowerCase(Locale.ROOT);
-        if (name.equals("spawn") && args.length >= 2) {
-            name = "spawn_" + args[1].toLowerCase(Locale.ROOT);
-        }
         plugin.warpManager().set(name, player.getLocation());
         MessageUtil.send(sender, "&aWarp &f" + name + " &aset to your current location.");
         return true;
@@ -185,8 +167,7 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
             MessageUtil.send(sender, "&cOnly players can use RTP.");
             return true;
         }
-        String region = args.length >= 1 ? args[0] : null;
-        plugin.rtpManager().teleport((Player) sender, region);
+        plugin.rtpManager().teleport((Player) sender);
         return true;
     }
 
@@ -308,8 +289,6 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
             switch (name) {
                 case "warp":
                     return prefix(plugin.warpManager().names(), args[0]);
-                case "rtp":
-                    return prefix(plugin.rtpManager().regionNames(), args[0]);
                 case "flag":
                 case "stats":
                 case "tpa":
@@ -321,9 +300,6 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
                 default:
                     return new ArrayList<>();
             }
-        }
-        if (args.length == 2 && name.equals("warp") && args[0].equalsIgnoreCase("spawn")) {
-            return prefix(plugin.warpManager().spawnRegions(), args[1]);
         }
         return new ArrayList<>();
     }

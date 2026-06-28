@@ -50,8 +50,8 @@ in a single plugin.
 - **SMP feature suite**:
   - Manual **flags** (`/flag`, `/flaglist`) with a player-head GUI and reasons.
   - **Stats** GUI (`/stats`) — mob kills, player kills, deaths, playtime.
-  - **Warps** (`/warp`, `/sswarp`) with regional spawn presets.
-  - **Random teleport** (`/rtp`) with regional presets and a lag-safe bounded search.
+  - **Warps** (`/warp`, `/sswarp`) — operator-set named destinations.
+  - **Random teleport** (`/rtp`) with a lag-safe bounded safe-location search.
   - **Teleport requests** (`/tpa`, `/tpahere`, `/tpaccept`, `/tpauto`, `/tp`) with
     warmup countdowns and cooldowns.
   - **Anti-combat-log** with a neon-blue boss-bar timer that blocks teleporting and
@@ -163,9 +163,9 @@ Standalone player-facing commands (separate from `/luac`):
 | `/flag <player> <reason>`       | `lumen.flag`       | Flag a player for suspicion (reason required)|
 | `/flaglist`                     | `lumen.flag`       | Open the flagged-players GUI (heads)         |
 | `/stats [player]`               | `lumen.stats`      | Open the stats GUI                           |
-| `/warp <name> [region]`         | `lumen.warp`       | Warp to a configured location                |
+| `/warp <name>`                  | `lumen.warp`       | Warp to a configured location                |
 | `/sswarp <name>`                | `lumen.warp.admin` | Set a warp at your location                  |
-| `/rtp [region]`                 | `lumen.rtp`        | Random teleport (optionally by region)       |
+| `/rtp`                          | `lumen.rtp`        | Random teleport around the survival world    |
 | `/rtpworld <world>`             | `lumen.rtp.admin`  | Set the RTP world                            |
 | `/rtpamount <radius>`           | `lumen.rtp.admin`  | Set the RTP maximum radius                   |
 | `/tpa <player>`                 | `lumen.tpa`        | Request to teleport to a player              |
@@ -180,12 +180,10 @@ Notes:
   head per flag; hover for the reason/flagger, left-click to teleport to the player,
   right-click to open their stats. The stats menu maps mob kills → zombie head,
   player kills → player head, deaths → skeleton skull, playtime → clock.
-- **`/warp spawn`** supports regional sub-presets: `/warp spawn asia` resolves to the
-  `spawn_asia` anchor; with no region it uses the configured default region. Set them
-  with `/sswarp spawn <region>`. Only `spawn` has region presets.
-- **`/rtp`** has regional presets (`/rtp asia`, `/rtp europe`, `/rtp northamerica`,
-  `/rtp oceania`) defined as centers in `features.yml`; bare `/rtp` picks one at
-  random. The search is bounded (configurable attempts) so it stays lag-friendly.
+- **Warps** are simple named destinations set by operators with `/sswarp <name>`
+  (e.g. `spawn`, `duels`, `crates`, `minigames`).
+- **`/rtp`** scatters the player around a configurable center point in the survival
+  world. The search is bounded (configurable attempts) so it stays lag-friendly.
 - **Teleports** show a neon-yellow boss-bar countdown and cancel (neon-red message)
   if you move or take combat damage; per-player cooldowns are configurable.
 
@@ -239,7 +237,7 @@ Hot-reloadable files are generated on first run:
 - **`investigation.yml`** — investigation tooling (confirmation, cleanup timer,
   loot value, distances, allowed ore blocks).
 - **`features.yml`** — SMP features: combat tag, teleport warmup/cooldowns, RTP
-  regions/radius, and warp/spawn-region settings.
+  center/radius, and warp settings.
 - **`warps.yml` / `flags.yml`** — runtime data stores (written by the plugin).
 
 Run `/luac reload` to apply changes without a restart.
@@ -263,7 +261,7 @@ LumenEssentials (composition root)
 ├── InvestigationManager spawnstash / oresummon presets + cleanup + monitoring
 ├── CombatTagManager     anti-combat-log boss bar + combat-log kill
 ├── TeleportManager      tpa/warp/rtp warmup countdown + cooldowns
-├── WarpManager          persistent warps + spawn regions (warps.yml)
+├── WarpManager          persistent named warps (warps.yml)
 ├── RtpManager           lag-safe bounded random teleport
 ├── FlagManager          manual flags (flags.yml) + FlagMenu GUI
 ├── StatsManager         vanilla statistics + StatsMenu GUI

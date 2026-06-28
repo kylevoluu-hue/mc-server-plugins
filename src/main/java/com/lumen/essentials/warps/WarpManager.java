@@ -14,9 +14,8 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Persistent named-warp store backed by {@code warps.yml}. Spawn regions are stored
- * as ordinary warps named {@code spawn_<region>}; {@code /warp spawn [region]}
- * resolves to the right one (or the configured default region).
+ * Persistent named-warp store backed by {@code warps.yml}. Warps are simple named
+ * destinations (e.g. {@code spawn}, {@code duels}) set by operators.
  */
 public final class WarpManager {
 
@@ -88,16 +87,5 @@ public final class WarpManager {
 
     public List<String> names() {
         return new ArrayList<>(warps.keySet());
-    }
-
-    /** The configured default spawn region (e.g. "europe"). */
-    public String defaultSpawnRegion() {
-        return plugin.configManager().features()
-                .getString("warps.default-spawn-region", "europe").toLowerCase(Locale.ROOT);
-    }
-
-    /** Configured spawn region names for tab completion. */
-    public List<String> spawnRegions() {
-        return plugin.configManager().features().getStringList("warps.spawn-regions");
     }
 }

@@ -18,10 +18,10 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Random-teleport with regional presets. Designed to stay cheap: each request makes
- * at most {@code max-attempts} bounded safe-location probes around a region center,
- * validating the surface block before teleporting. Per-player cooldowns prevent
- * spamming the search.
+ * Random-teleport around a configurable center point. Designed to stay cheap: each
+ * request makes at most {@code max-attempts} bounded safe-location probes, validating
+ * the surface block before teleporting. Per-player cooldowns prevent spamming the
+ * search.
  */
 public final class RtpManager {
 
@@ -42,15 +42,6 @@ public final class RtpManager {
         return c == null || c.getBoolean("enabled", true);
     }
 
-    public List<String> regionNames() {
-        ConfigurationSection regions = featuresPath("rtp.regions");
-        return regions == null ? new ArrayList<>() : new ArrayList<>(regions.getKeys(false));
-    }
-
-    private ConfigurationSection featuresPath(String path) {
-        return plugin.configManager().features().getConfigurationSection(path);
-    }
-
     public void setWorld(String world) {
         plugin.configManager().features().set("rtp.world", world);
     }
@@ -60,10 +51,10 @@ public final class RtpManager {
     }
 
     /**
-     * Attempts a random teleport for the player. {@code region} may be null/blank for
-     * a random region. Returns true on success; messaging is handled here.
+     * Attempts a random teleport for the player. Returns true on success; messaging
+     * is handled here.
      */
-    public boolean teleport(Player player, String region) {
+    public boolean teleport(Player player) {
         if (!isEnabled()) {
             MessageUtil.send(player, "&cRTP is currently disabled.");
             return false;
@@ -81,17 +72,13 @@ public final class RtpManager {
             return false;
         }
 
-        int[] center = resolveCenter(region);
-        if (center == null) {
-            MessageUtil.send(player, "&cUnknown region. Options: &f" + String.join(", ", regionNames()));
-            return false;
-        }
-
+        int centerX = c.getInt("center-x", 0);
+        int centerZ = c.getInt("center-z", 0);
         int maxRadius = c.getInt("max-radius", 5000);
         int minRadius = c.getInt("min-radius", 250);
         int attempts = Math.max(1, c.getInt("max-attempts", 30));
 
-        Location safe = findSafe(world, center[0], center[1], minRadius, maxRadius, attempts);
+        Location safe = findSafe(world, centerX, centerZ, minRadius, maxRadius, attempts);
         if (safe == null) {
             MessageUtil.send(player, "&cCould not find a safe location, try again.");
             return false;
@@ -102,27 +89,6 @@ public final class RtpManager {
         MessageUtil.send(player, "&aTeleported to &f" + safe.getBlockX() + ", "
                 + safe.getBlockY() + ", " + safe.getBlockZ() + "&a.");
         return true;
-    }
-
-    private int[] resolveCenter(String region) {
-        List<String> regions = regionNames();
-        String chosen;
-        if (region == null || region.isEmpty()) {
-            if (regions.isEmpty()) {
-                return new int[]{0, 0};
-            }
-            chosen = regions.get(random.nextInt(regions.size()));
-        } else {
-            chosen = region.toLowerCase(Locale.ROOT);
-            if (!regions.contains(chosen)) {
-                return null;
-            }
-        }
-        ConfigurationSection r = featuresPath("rtp.regions." + chosen);
-        if (r == null) {
-            return new int[]{0, 0};
-        }
-        return new int[]{r.getInt("x", 0), r.getInt("z", 0)};
     }
 
     private Location findSafe(World world, int cx, int cz, int min, int max, int attempts) {
