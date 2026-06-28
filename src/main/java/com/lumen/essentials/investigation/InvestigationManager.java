@@ -495,8 +495,17 @@ public final class InvestigationManager {
         int x = near.getBlockX() + (int) (Math.cos(angle) * dist);
         int z = near.getBlockZ() + (int) (Math.sin(angle) * dist);
         // Place a bit underground so the object is genuinely "hidden".
-        int baseY = Math.max(world.getMinHeight() + 5, near.getBlockY() - (8 + random.nextInt(20)));
+        int baseY = Math.max(minWorldHeight(world) + 5, near.getBlockY() - (8 + random.nextInt(20)));
         return new Location(world, x + 0.5, baseY, z + 0.5);
+    }
+
+    /** World#getMinHeight is 1.17+; fall back to 0 on older servers. */
+    private int minWorldHeight(World world) {
+        try {
+            return world.getMinHeight();
+        } catch (Throwable ignored) {
+            return 0;
+        }
     }
 
     private Material pick(Material... options) {
