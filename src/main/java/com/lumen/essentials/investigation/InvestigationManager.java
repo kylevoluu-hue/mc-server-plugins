@@ -202,23 +202,142 @@ public final class InvestigationManager {
         return list.toArray(new org.bukkit.entity.EntityType[0]);
     }
 
+    /**
+     * Builds an actual hidden base: a hollow room (floor, walls, ceiling) carved out
+     * of the terrain, with a doorway, lighting and furniture, and the loot containers
+     * placed inside. Size scales the interior footprint and height. Every block is
+     * recorded so cleanup restores the terrain exactly.
+     */
     private void placeBase(TestObject object, Location target, int scale, String size) {
-        // A "base with loot": a randomized cluster of containers, sometimes a spawner.
-        int containers = 2 + scale;
-        Block base = target.getBlock();
-        String[] kinds = {"chest", "barrel", "shulker"};
-        for (int i = 0; i < containers; i++) {
-            Block b = base.getRelative(random.nextInt(5) - 2, random.nextInt(3) - 1, random.nextInt(5) - 2);
-            if (b.getType() == Material.AIR) {
-                continue;
+        Block base = target.getBlock(); // interior floor center
+        int half = baseHalf(scale);     // interior reaches +/- half on x/z
+        int height = baseHeight(scale); // interior wall height
+        Material[] mats = buildingMaterials(base.getWorld());
+        Material wall = mats[0];
+        Material floor = mats[1];
+
+        // 1) Shell + hollow interior.
+        for (int dx = -half - 1; dx <= half + 1; dx++) {
+            for (int dz = -half - 1; dz <= half + 1; dz++) {
+                for (int dy = -1; dy <= height; dy++) {
+                    Block b = base.getRelative(dx, dy, dz);
+                    boolean edgeX = dx == -half - 1 || dx == half + 1;
+                    boolean edgeZ = dz == -half - 1 || dz == half + 1;
+                    boolean isFloor = dy == -1;
+                    boolean isCeiling = dy == height;
+                    if (edgeX || edgeZ || isFloor || isCeiling) {
+                        setBlock(object, b, isFloor ? floor : wall);
+                    } else {
+                        setBlock(object, b, Material.AIR); // carve the room
+                    }
+                }
             }
-            object.rememberBlock(b.getLocation(), b.getType());
-            b.setType(containerMaterial(kinds[random.nextInt(kinds.length)]), false);
+        }
+
+        // 2) Doorway: a 1x2 opening in the middle of one wall.
+        int wallX = half + 1;
+        setBlock(object, base.getRelative(wallX, 0, 0), Material.AIR);
+        setBlock(object, base.getRelative(wallX, 1, 0), Material.AIR);
+
+        // 3) Interior floor cells available for furnishings (shuffled).
+        List<int[]> cells = new ArrayList<>();
+        for (int dx = -half; dx <= half; dx++) {
+            for (int dz = -half; dz <= half; dz++) {
+                cells.add(new int[]{dx, dz});
+            }
+        }
+        java.util.Collections.shuffle(cells, random);
+        int index = 0;
+
+        // 4) Loot containers.
+        int containers = Math.min(cells.size() - 2, 2 + scale);
+        String[] kinds = {"chest", "barrel", "shulker"};
+        for (int i = 0; i < containers && index < cells.size(); i++, index++) {
+            int[] c = cells.get(index);
+            Block b = base.getRelative(c[0], 0, c[1]);
+            setBlock(object, b, containerMaterial(kinds[random.nextInt(kinds.length)]));
             fillContainer(b, size, scale);
         }
-        if (random.nextBoolean()) {
-            placeSpawner(object, base.getRelative(0, -1, 0), scale);
+
+        // 5) Furniture for a lived-in look.
+        for (String furniture : new String[]{"CRAFTING_TABLE", "FURNACE", "BOOKSHELF"}) {
+            if (index >= cells.size()) {
+                break;
+            }
+            Material m = plugin.versionManager().adapter().resolveMaterial(furniture);
+            if (m != null && random.nextBoolean()) {
+                int[] c = cells.get(index++);
+                setBlock(object, base.getRelative(c[0], 0, c[1]), m);
+            }
         }
+
+        // 6) Lighting so the room reads as inhabited.
+        Material light = firstMaterial("LANTERN", "GLOWSTONE", "TORCH", "SHROOMLIGHT");
+        if (light != null) {
+            int lights = 1 + scale / 2;
+            for (int i = 0; i < lights && index < cells.size(); i++, index++) {
+                int[] c = cells.get(index);
+                setBlock(object, base.getRelative(c[0], height - 1, c[1]), light);
+            }
+        }
+
+        // 7) A spawner sometimes, tucked in a corner.
+        if (random.nextBoolean()) {
+            placeSpawner(object, base.getRelative(half, 0, half), scale);
+        }
+    }
+
+    private void setBlock(TestObject object, Block block, Material material) {
+        if (material == null) {
+            return;
+        }
+        object.rememberBlock(block.getLocation(), block.getType());
+        block.setType(material, false);
+    }
+
+    private int baseHalf(int scale) {
+        switch (scale) {
+            case 1: return 1;  // small  -> 3x3 interior
+            case 2: return 2;  // regular-> 5x5
+            case 4: return 3;  // large  -> 7x7
+            default: return 4; // huge   -> 9x9
+        }
+    }
+
+    private int baseHeight(int scale) {
+        switch (scale) {
+            case 1: return 3;
+            case 2: return 4;
+            case 4: return 5;
+            default: return 6;
+        }
+    }
+
+    private Material[] buildingMaterials(World world) {
+        boolean nether = world.getEnvironment() == World.Environment.NETHER;
+        Material wall;
+        Material floor;
+        if (nether) {
+            wall = firstMaterial("NETHER_BRICKS", "BLACKSTONE", "NETHERRACK", "COBBLESTONE", "STONE");
+            floor = firstMaterial("BLACKSTONE", "NETHER_BRICKS", "NETHERRACK", "STONE");
+        } else {
+            String[] walls = {"STONE_BRICKS", "COBBLESTONE", "DEEPSLATE_BRICKS",
+                    "MOSSY_COBBLESTONE", "OAK_PLANKS", "POLISHED_ANDESITE"};
+            String[] floors = {"OAK_PLANKS", "STONE_BRICKS", "COBBLESTONE", "SPRUCE_PLANKS"};
+            wall = firstMaterial(walls[random.nextInt(walls.length)], "COBBLESTONE", "STONE");
+            floor = firstMaterial(floors[random.nextInt(floors.length)], "COBBLESTONE", "STONE");
+        }
+        return new Material[]{wall == null ? Material.STONE : wall, floor == null ? Material.STONE : floor};
+    }
+
+    private Material firstMaterial(String... names) {
+        for (String name : names) {
+            Material material = plugin.versionManager().adapter().resolveMaterial(name);
+            if (material != null) {
+                return material;
+            }
+        }
+        return null;
     }
 
     private void fillContainer(Block block, String size, int scale) {
