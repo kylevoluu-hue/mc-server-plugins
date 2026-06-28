@@ -12,6 +12,58 @@ commands:
     description: Lumen Essentials main command.
     usage: /luac help
     aliases: [lumen]
+  flag:
+    description: Flag a player for suspicion with a reason.
+    usage: /flag <player> <reason>
+    permission: lumen.flag
+  flaglist:
+    description: Open the flagged-players menu.
+    usage: /flaglist
+    permission: lumen.flag
+  stats:
+    description: View a player's stats menu.
+    usage: /stats [player]
+    permission: lumen.stats
+  warp:
+    description: Warp to a configured location.
+    usage: /warp <name> [region]
+    permission: lumen.warp
+  sswarp:
+    description: Set a warp at your location.
+    usage: /sswarp <name>
+    permission: lumen.warp.admin
+  rtp:
+    description: Randomly teleport (optionally by region).
+    usage: /rtp [region]
+    permission: lumen.rtp
+  rtpworld:
+    description: Set the RTP world.
+    usage: /rtpworld <world>
+    permission: lumen.rtp.admin
+  rtpamount:
+    description: Set the RTP maximum radius.
+    usage: /rtpamount <radius>
+    permission: lumen.rtp.admin
+  tpa:
+    description: Request to teleport to a player.
+    usage: /tpa <player>
+    permission: lumen.tpa
+  tpahere:
+    description: Request a player to teleport to you.
+    usage: /tpahere <player>
+    permission: lumen.tpa
+  tpaccept:
+    description: Accept a pending teleport request.
+    usage: /tpaccept
+    permission: lumen.tpa
+  tpauto:
+    description: Toggle auto-accepting teleport requests.
+    usage: /tpauto
+    permission: lumen.tpa
+  tp:
+    description: Teleport (staff).
+    usage: /tp <player> | <p1> <p2> | <x y z>
+    permission: lumen.tp
 
 permissions:
   luac.admin:
@@ -37,4 +89,31 @@ permissions:
     default: op
   luac.oresummon:
     description: Create investigation test ore veins.
+    default: op
+  lumen.flag:
+    description: Flag players and view the flag list.
+    default: op
+  lumen.stats:
+    description: View your own stats menu.
+    default: true
+  lumen.stats.others:
+    description: View other players' stats menus.
+    default: op
+  lumen.warp:
+    description: Use warps.
+    default: true
+  lumen.warp.admin:
+    description: Set and manage warps.
+    default: op
+  lumen.rtp:
+    description: Use random teleport.
+    default: true
+  lumen.rtp.admin:
+    description: Configure random teleport.
+    default: op
+  lumen.tpa:
+    description: Use teleport requests.
+    default: true
+  lumen.tp:
+    description: Use staff teleport.
     default: op

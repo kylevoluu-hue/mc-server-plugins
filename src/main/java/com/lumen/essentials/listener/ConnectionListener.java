@@ -66,5 +66,6 @@ public final class ConnectionListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         plugin.playerDataManager().remove(event.getPlayer().getUniqueId());
         plugin.alertManager().handleQuit(event.getPlayer().getUniqueId());
+        plugin.teleportManager().handleQuit(event.getPlayer().getUniqueId());
     }
 }

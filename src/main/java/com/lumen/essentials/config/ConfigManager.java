@@ -16,6 +16,10 @@ public final class ConfigManager {
     private final ConfigFile messages;
     private final ConfigFile punishments;
     private final ConfigFile investigation;
+    private final ConfigFile features;
+    // Runtime data stores (written to by the plugin, not shipped defaults).
+    private final ConfigFile warps;
+    private final ConfigFile flags;
 
     public ConfigManager(Plugin plugin) {
         this.config = new ConfigFile(plugin, "config.yml");
@@ -23,6 +27,9 @@ public final class ConfigManager {
         this.messages = new ConfigFile(plugin, "messages.yml");
         this.punishments = new ConfigFile(plugin, "punishments.yml");
         this.investigation = new ConfigFile(plugin, "investigation.yml");
+        this.features = new ConfigFile(plugin, "features.yml");
+        this.warps = new ConfigFile(plugin, "warps.yml", true);
+        this.flags = new ConfigFile(plugin, "flags.yml", true);
     }
 
     public void loadAll() {
@@ -31,6 +38,9 @@ public final class ConfigManager {
         messages.load();
         punishments.load();
         investigation.load();
+        features.load();
+        warps.load();
+        flags.load();
     }
 
     public void reloadAll() {
@@ -39,6 +49,9 @@ public final class ConfigManager {
         messages.reload();
         punishments.reload();
         investigation.reload();
+        features.reload();
+        warps.reload();
+        flags.reload();
     }
 
     public FileConfiguration config() {
@@ -59,6 +72,26 @@ public final class ConfigManager {
 
     public FileConfiguration investigation() {
         return investigation.get();
+    }
+
+    public FileConfiguration features() {
+        return features.get();
+    }
+
+    public FileConfiguration warps() {
+        return warps.get();
+    }
+
+    public void saveWarps() {
+        warps.save();
+    }
+
+    public FileConfiguration flags() {
+        return flags.get();
+    }
+
+    public void saveFlags() {
+        flags.save();
     }
 
     /** Convenience accessor for a message string with a fallback. */

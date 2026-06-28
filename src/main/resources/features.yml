@@ -1,0 +1,95 @@
+# =====================================================================
+#  Lumen Essentials - features.yml
+#  Survival/SMP feature settings: combat tag, teleporting, RTP, warps.
+#  Supports /luac reload.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Anti-combat-log. A player is "tagged" when they deal or take player
+# damage; the timer resets on each new hit. While tagged, teleport
+# commands are blocked. A neon-blue boss bar shows the remaining time.
+# ---------------------------------------------------------------------
+combat:
+  enabled: true
+  # Seconds a player stays in combat after the most recent hit.
+  duration-seconds: 15
+  # Boss bar color (BLUE = neon blue). Bukkit BarColor values.
+  bar-color: BLUE
+  bar-title: "&bCombat : &f{time}"
+  # Commands blocked while tagged (matched against the first word).
+  blocked-commands:
+    - tp
+    - tpa
+    - tpahere
+    - tpaccept
+    - tpauto
+    - rtp
+    - warp
+    - spawn
+  # Kill players who disconnect while tagged. They die on logout (dropping their
+  # items per server rules) and respawn at their spawn point on next login.
+  kill-on-combat-log: true
+  # Optionally run extra console commands when someone combat-logs.
+  punish-combat-log:
+    enabled: false
+    commands:
+      - "say [Lumen] {player} logged out in combat!"
+
+# ---------------------------------------------------------------------
+# Teleport requests and cooldowns. A neon-yellow boss bar counts down
+# the warmup; moving or taking combat cancels it with a neon-red message.
+# ---------------------------------------------------------------------
+teleport:
+  # Warmup (seconds) before a teleport completes. 0 = instant.
+  warmup-seconds: 3
+  # Cooldown (seconds) between teleports per player.
+  cooldown-seconds: 5
+  # How long a /tpa request stays valid (seconds).
+  request-expiry-seconds: 60
+  # Cancel the warmup if the player moves more than this many blocks.
+  cancel-on-move-distance: 0.5
+  bar-color: YELLOW
+  bar-title: "&eTeleporting in &f{time}&e..."
+  message-cancelled-move: "&cTeleport cancelled - you moved!"
+  message-cancelled-combat: "&cTeleport cancelled - you are in combat!"
+  message-on-cooldown: "&cYou must wait &f{time}s &cbefore teleporting again."
+  message-request-sent: "&aTeleport request sent to &f{target}&a."
+  message-request-received: "&e{player} &7wants to teleport to you. &a/tpaccept&7."
+
+# ---------------------------------------------------------------------
+# Random teleport. Regional presets are named spawn anchors in the
+# survival world; /rtp picks a random one. Designed to be lag-safe:
+# candidate locations are validated against the highest block and a
+# bounded number of attempts is used per request.
+# ---------------------------------------------------------------------
+rtp:
+  enabled: true
+  # World RTP operates in (set with /rtpworld <world>).
+  world: world
+  # Maximum radius from a region center (set with /rtpamount <blocks>).
+  max-radius: 5000
+  min-radius: 250
+  cooldown-seconds: 30
+  # Max safe-location search attempts before giving up (keeps it cheap).
+  max-attempts: 30
+  # Region centers (x,z) in the RTP world. /rtp <region> uses the matching
+  # center; /rtp alone picks one at random.
+  regions:
+    europe: { x: 0, z: 0 }
+    northamerica: { x: 10000, z: 0 }
+    oceania: { x: 0, z: 10000 }
+    asia: { x: -10000, z: 0 }
+
+# ---------------------------------------------------------------------
+# Warps. Lobby/spawn destinations set by operators with /sswarp <name>.
+# Stored in warps.yml. /warp spawn supports regional sub-presets named
+# spawn_<region> (e.g. /warp spawn asia -> warp "spawn_asia").
+# ---------------------------------------------------------------------
+warps:
+  # The default region used by /warp spawn when no region is given.
+  default-spawn-region: europe
+  spawn-regions:
+    - europe
+    - northamerica
+    - oceania
+    - asia

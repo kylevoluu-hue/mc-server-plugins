@@ -47,6 +47,15 @@ in a single plugin.
   with placeholder substitution; conservative defaults to avoid false bans.
 - **Staff alerts & debug/verbose** subscriptions.
 - **Player profiling**: per-player violations, suspicion scores and client brand.
+- **SMP feature suite**:
+  - Manual **flags** (`/flag`, `/flaglist`) with a player-head GUI and reasons.
+  - **Stats** GUI (`/stats`) — mob kills, player kills, deaths, playtime.
+  - **Warps** (`/warp`, `/sswarp`) with regional spawn presets.
+  - **Random teleport** (`/rtp`) with regional presets and a lag-safe bounded search.
+  - **Teleport requests** (`/tpa`, `/tpahere`, `/tpaccept`, `/tpauto`, `/tp`) with
+    warmup countdowns and cooldowns.
+  - **Anti-combat-log** with a neon-blue boss-bar timer that blocks teleporting and
+    kills players who log out in combat.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -127,11 +136,67 @@ permissions.
 | `/luac orelog [player]`         | `luac.investigate`| Recent valuable-ore discoveries          |
 | `/luac inspectmine <player>`    | `luac.investigate`| Mining suspicion summary                 |
 | `/luac xraytop`                 | `luac.investigate`| Top valuable-ore discoverers             |
-| `/luac spawnstash <target>`     | `luac.spawnstash` | Create a hidden test stash               |
-| `/luac oresummon <target>`      | `luac.oresummon`  | Create a hidden test ore vein            |
+| `/luac spawnstash <type> <size> [target]` | `luac.spawnstash` | Create a hidden test stash      |
+| `/luac oresummon <ore> <amount> [target]` | `luac.oresummon`  | Create a hidden test ore vein   |
 
-`<target>` for the investigation tools is one of: `<player>`, `<world> <x> <y> <z>`,
-or `random`. When confirmation is enabled, append `confirm`.
+Investigation presets (every invocation is freshly randomized — different base, vein,
+spawners and loot each time):
+
+- `spawnstash <type> <size> [target]` — `type` is `chest`, `barrel`, `shulker`,
+  `spawner` (filled mob spawner), `base` (a cluster of loot containers, sometimes a
+  spawner), or `random`; `size` is `small`, `regular`, `large`, or `huge` (scales the
+  loot and container count).
+- `oresummon <ore> <amount> [target]` — `ore` accepts friendly aliases (`diamond`,
+  `gold`, `ancient_debris`, `emerald`, `iron`, `copper`, `redstone`, `lapis`, `coal`,
+  and crafted blocks like `diamond_block`, `gold_block`, `emerald_block`,
+  `iron_block`, `netherite_block`) or `random`; `amount` is the vein size.
+
+`[target]` is optional and is one of `<player>`, `<world> <x> <y> <z>`, or `random`
+(defaults to your own location). When confirmation is enabled, append `confirm`.
+
+### SMP feature commands
+
+Standalone player-facing commands (separate from `/luac`):
+
+| Command                         | Permission         | Description                                  |
+|---------------------------------|--------------------|----------------------------------------------|
+| `/flag <player> <reason>`       | `lumen.flag`       | Flag a player for suspicion (reason required)|
+| `/flaglist`                     | `lumen.flag`       | Open the flagged-players GUI (heads)         |
+| `/stats [player]`               | `lumen.stats`      | Open the stats GUI                           |
+| `/warp <name> [region]`         | `lumen.warp`       | Warp to a configured location                |
+| `/sswarp <name>`                | `lumen.warp.admin` | Set a warp at your location                  |
+| `/rtp [region]`                 | `lumen.rtp`        | Random teleport (optionally by region)       |
+| `/rtpworld <world>`             | `lumen.rtp.admin`  | Set the RTP world                            |
+| `/rtpamount <radius>`           | `lumen.rtp.admin`  | Set the RTP maximum radius                   |
+| `/tpa <player>`                 | `lumen.tpa`        | Request to teleport to a player              |
+| `/tpahere <player>`             | `lumen.tpa`        | Request a player to teleport to you          |
+| `/tpaccept`                     | `lumen.tpa`        | Accept a pending request                     |
+| `/tpauto`                       | `lumen.tpa`        | Toggle auto-accepting requests               |
+| `/tp <player>` / `<p1> <p2>` / `<x y z>` | `lumen.tp` | Staff teleport                             |
+
+Notes:
+
+- **GUIs** use a DonutSMP-style read-only inventory. The flag menu shows one player
+  head per flag; hover for the reason/flagger, left-click to teleport to the player,
+  right-click to open their stats. The stats menu maps mob kills → zombie head,
+  player kills → player head, deaths → skeleton skull, playtime → clock.
+- **`/warp spawn`** supports regional sub-presets: `/warp spawn asia` resolves to the
+  `spawn_asia` anchor; with no region it uses the configured default region. Set them
+  with `/sswarp spawn <region>`. Only `spawn` has region presets.
+- **`/rtp`** has regional presets (`/rtp asia`, `/rtp europe`, `/rtp northamerica`,
+  `/rtp oceania`) defined as centers in `features.yml`; bare `/rtp` picks one at
+  random. The search is bounded (configurable attempts) so it stays lag-friendly.
+- **Teleports** show a neon-yellow boss-bar countdown and cancel (neon-red message)
+  if you move or take combat damage; per-player cooldowns are configurable.
+
+### Anti-combat-log
+
+Dealing or taking PvP damage tags both players for a configurable duration, shown on
+a neon-blue boss bar (`Combat : {time}`). Each new hit resets the timer. While tagged,
+teleport/warp/spawn commands are blocked. Disconnecting while tagged **kills the
+player** (they drop items per server rules and respawn at their spawn on next login)
+and can optionally run extra punishment commands. All tunables live under `combat:`
+in `features.yml`.
 
 ---
 
@@ -147,12 +212,21 @@ or `random`. When confirmation is enabled, append `confirm`.
 | `luac.investigate` | op      | Investigation/forensic commands           |
 | `luac.spawnstash`  | op      | Create test stashes                       |
 | `luac.oresummon`   | op      | Create test ore veins                     |
+| `lumen.flag`       | op      | Flag players / open the flag list         |
+| `lumen.stats`      | true    | View your own stats                       |
+| `lumen.stats.others`| op     | View other players' stats                 |
+| `lumen.warp`       | true    | Use warps                                 |
+| `lumen.warp.admin` | op      | Set/manage warps                          |
+| `lumen.rtp`        | true    | Use random teleport                       |
+| `lumen.rtp.admin`  | op      | Configure random teleport                 |
+| `lumen.tpa`        | true    | Use teleport requests                     |
+| `lumen.tp`         | op      | Staff teleport                            |
 
 ---
 
 ## Configuration
 
-Five hot-reloadable files are generated on first run:
+Hot-reloadable files are generated on first run:
 
 - **`config.yml`** — general settings, logging, and the anti-xray module
   (protected blocks, per-world control, suspicion weights).
@@ -164,6 +238,9 @@ Five hot-reloadable files are generated on first run:
   (`{player} {check} {vl} {ping} {tps} {world} {x} {y} {z}`).
 - **`investigation.yml`** — investigation tooling (confirmation, cleanup timer,
   loot value, distances, allowed ore blocks).
+- **`features.yml`** — SMP features: combat tag, teleport warmup/cooldowns, RTP
+  regions/radius, and warp/spawn-region settings.
+- **`warps.yml` / `flags.yml`** — runtime data stores (written by the plugin).
 
 Run `/luac reload` to apply changes without a restart.
 
@@ -183,8 +260,16 @@ LumenEssentials (composition root)
 ├── AlertManager         alert + debug subscriptions
 ├── PunishmentManager    data-driven console-command actions
 ├── AntiXrayManager      ore logging + suspicion + alerts
-├── InvestigationManager spawnstash / oresummon + cleanup + monitoring
+├── InvestigationManager spawnstash / oresummon presets + cleanup + monitoring
+├── CombatTagManager     anti-combat-log boss bar + combat-log kill
+├── TeleportManager      tpa/warp/rtp warmup countdown + cooldowns
+├── WarpManager          persistent warps + spawn regions (warps.yml)
+├── RtpManager           lag-safe bounded random teleport
+├── FlagManager          manual flags (flags.yml) + FlagMenu GUI
+├── StatsManager         vanilla statistics + StatsMenu GUI
+├── gui.Menu/MenuListener read-only chest GUIs
 ├── CommandManager       /luac dispatcher + SubCommand registry
+├── FeatureCommandHandler /flag /stats /warp /rtp /tpa ... dispatcher
 └── LumenAPI             public developer API + Bukkit events
 ```
 

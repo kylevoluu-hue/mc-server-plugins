@@ -77,10 +77,13 @@ public final class InvestigationManager {
     // --- Stash --------------------------------------------------------------
 
     /**
-     * Creates a hidden randomized stash near a location. Returns the placed object,
-     * or {@code null} if disabled/invalid.
+     * Creates a hidden randomized stash near a location. Every invocation produces a
+     * different base, container mix and loot.
+     *
+     * @param stashType chest | barrel | shulker | spawner | base | random
+     * @param size      small | regular | large | huge (scales loot/containers)
      */
-    public TestObject spawnStash(Player staff, Location near) {
+    public TestObject spawnStash(Player staff, Location near, String stashType, String size) {
         if (!toolsEnabled() || near == null || near.getWorld() == null) {
             return null;
         }
@@ -99,24 +102,126 @@ public final class InvestigationManager {
         TestObject object = new TestObject(TestObject.Type.STASH, target,
                 staff.getName(), cleanupAtMillis());
 
-        Material containerType = pick(Material.CHEST, Material.BARREL, resolveShulker());
-        Block block = target.getBlock();
-        object.rememberBlock(block.getLocation(), block.getType());
-        block.setType(containerType, false);
+        int scale = sizeScale(size);
+        String type = (stashType == null || stashType.isEmpty()) ? "random"
+                : stashType.toLowerCase(java.util.Locale.ROOT);
+        if (type.equals("random")) {
+            String[] all = {"chest", "barrel", "shulker", "spawner", "base"};
+            type = all[random.nextInt(all.length)];
+        }
 
-        fillContainer(block, inv.getString("investigation-tools.spawnstash.max-loot-value", "medium"));
+        switch (type) {
+            case "spawner":
+                placeSpawner(object, target.getBlock(), scale);
+                break;
+            case "base":
+                placeBase(object, target, scale, size);
+                break;
+            default:
+                placeContainer(object, target.getBlock(), type, scale, size);
+                break;
+        }
+
         objects.add(object);
-
-        log(staff, "spawnstash", object, "container=" + containerType);
+        log(staff, "spawnstash", object, "type=" + type + " size=" + size);
         return object;
     }
 
-    private Material resolveShulker() {
-        Material shulker = plugin.versionManager().adapter().resolveMaterial("SHULKER_BOX");
-        return shulker != null ? shulker : Material.CHEST;
+    private int sizeScale(String size) {
+        if (size == null) {
+            return 2;
+        }
+        switch (size.toLowerCase(java.util.Locale.ROOT)) {
+            case "small":
+                return 1;
+            case "large":
+                return 4;
+            case "huge":
+                return 8;
+            case "regular":
+            default:
+                return 2;
+        }
     }
 
-    private void fillContainer(Block block, String lootValue) {
+    private Material containerMaterial(String type) {
+        switch (type) {
+            case "barrel": {
+                Material m = plugin.versionManager().adapter().resolveMaterial("BARREL");
+                return m != null ? m : Material.CHEST;
+            }
+            case "shulker": {
+                Material m = plugin.versionManager().adapter().resolveMaterial("SHULKER_BOX");
+                return m != null ? m : Material.CHEST;
+            }
+            case "chest":
+            default:
+                return Material.CHEST;
+        }
+    }
+
+    private void placeContainer(TestObject object, Block block, String type, int scale, String size) {
+        object.rememberBlock(block.getLocation(), block.getType());
+        block.setType(containerMaterial(type), false);
+        fillContainer(block, size, scale);
+    }
+
+    private void placeSpawner(TestObject object, Block block, int scale) {
+        Material spawner = plugin.versionManager().adapter().resolveMaterial("SPAWNER");
+        if (spawner == null) {
+            placeContainer(object, block, "chest", scale, "regular");
+            return;
+        }
+        object.rememberBlock(block.getLocation(), block.getType());
+        block.setType(spawner, false);
+        try {
+            BlockState state = block.getState();
+            if (state instanceof org.bukkit.block.CreatureSpawner) {
+                org.bukkit.block.CreatureSpawner cs = (org.bukkit.block.CreatureSpawner) state;
+                org.bukkit.entity.EntityType[] mobs = randomSpawnerMobs();
+                cs.setSpawnedType(mobs[random.nextInt(mobs.length)]);
+                cs.update();
+            }
+        } catch (Throwable ignored) {
+            // CreatureSpawner API differences across versions; the block is still placed.
+        }
+    }
+
+    private org.bukkit.entity.EntityType[] randomSpawnerMobs() {
+        List<org.bukkit.entity.EntityType> list = new ArrayList<>();
+        for (String name : new String[]{"ZOMBIE", "SKELETON", "SPIDER", "CAVE_SPIDER", "BLAZE", "CREEPER"}) {
+            try {
+                list.add(org.bukkit.entity.EntityType.valueOf(name));
+            } catch (IllegalArgumentException ignored) {
+                // Mob not present on this version.
+            }
+        }
+        if (list.isEmpty()) {
+            list.add(org.bukkit.entity.EntityType.ZOMBIE);
+        }
+        return list.toArray(new org.bukkit.entity.EntityType[0]);
+    }
+
+    private void placeBase(TestObject object, Location target, int scale, String size) {
+        // A "base with loot": a randomized cluster of containers, sometimes a spawner.
+        int containers = 2 + scale;
+        Block base = target.getBlock();
+        String[] kinds = {"chest", "barrel", "shulker"};
+        for (int i = 0; i < containers; i++) {
+            Block b = base.getRelative(random.nextInt(5) - 2, random.nextInt(3) - 1, random.nextInt(5) - 2);
+            if (b.getType() == Material.AIR) {
+                continue;
+            }
+            object.rememberBlock(b.getLocation(), b.getType());
+            b.setType(containerMaterial(kinds[random.nextInt(kinds.length)]), false);
+            fillContainer(b, size, scale);
+        }
+        if (random.nextBoolean()) {
+            placeSpawner(object, base.getRelative(0, -1, 0), scale);
+        }
+    }
+
+    private void fillContainer(Block block, String size, int scale) {
         // InventoryHolder (rather than the 1.13+ Container interface) keeps this
         // compatible all the way back to legacy chests.
         BlockState state = block.getState();
@@ -124,9 +229,8 @@ public final class InvestigationManager {
             return;
         }
         Inventory inventory = ((InventoryHolder) state).getInventory();
-        int rolls = "high".equalsIgnoreCase(lootValue) ? 8
-                : "low".equalsIgnoreCase(lootValue) ? 3 : 5;
-        Material[] loot = lootTable(lootValue);
+        int rolls = (3 + random.nextInt(4)) * Math.max(1, scale);
+        Material[] loot = lootTable(size);
         for (int i = 0; i < rolls; i++) {
             Material material = loot[random.nextInt(loot.length)];
             int slot = random.nextInt(inventory.getSize());
@@ -134,14 +238,16 @@ public final class InvestigationManager {
         }
     }
 
-    private Material[] lootTable(String value) {
+    private Material[] lootTable(String size) {
         List<Material> list = new ArrayList<>();
-        addIfPresent(list, "IRON_INGOT", "GOLD_INGOT", "EXPERIENCE_BOTTLE", "ARROW", "BREAD");
-        if (!"low".equalsIgnoreCase(value)) {
-            addIfPresent(list, "DIAMOND", "EMERALD", "ENDER_PEARL");
+        addIfPresent(list, "IRON_INGOT", "GOLD_INGOT", "EXPERIENCE_BOTTLE", "ARROW", "BREAD", "COAL");
+        String s = size == null ? "regular" : size.toLowerCase(java.util.Locale.ROOT);
+        if (!s.equals("small")) {
+            addIfPresent(list, "DIAMOND", "EMERALD", "ENDER_PEARL", "GOLDEN_CARROT");
         }
-        if ("high".equalsIgnoreCase(value)) {
-            addIfPresent(list, "NETHERITE_SCRAP", "GOLDEN_APPLE", "DIAMOND_BLOCK");
+        if (s.equals("large") || s.equals("huge")) {
+            addIfPresent(list, "NETHERITE_SCRAP", "NETHERITE_INGOT", "GOLDEN_APPLE",
+                    "DIAMOND_BLOCK", "ENCHANTED_GOLDEN_APPLE");
         }
         if (list.isEmpty()) {
             list.add(Material.STONE);
@@ -160,7 +266,15 @@ public final class InvestigationManager {
 
     // --- Ore vein -----------------------------------------------------------
 
-    public TestObject oreSummon(Player staff, Location near) {
+    /**
+     * Creates a hidden randomized ore vein. Each call random-walks a fresh blob so no
+     * two veins share a shape.
+     *
+     * @param oreType    friendly ore alias (diamond, gold, ancient_debris, emerald,
+     *                   iron, copper, redstone, lapis, coal, *_block, ...) or "random"
+     * @param veinAmount number of ore blocks to place; &lt;= 0 picks a random amount
+     */
+    public TestObject oreSummon(Player staff, Location near, String oreType, int veinAmount) {
         if (!toolsEnabled() || near == null || near.getWorld() == null) {
             return null;
         }
@@ -170,14 +284,16 @@ public final class InvestigationManager {
         }
         int minOres = inv.getInt("investigation-tools.oresummon.min-ores", 3);
         int maxOres = inv.getInt("investigation-tools.oresummon.max-ores", 12);
-        int count = minOres + random.nextInt(Math.max(1, maxOres - minOres + 1));
+        int count = veinAmount > 0 ? veinAmount
+                : minOres + random.nextInt(Math.max(1, maxOres - minOres + 1));
+        count = Math.max(1, Math.min(count, 256)); // safety cap
 
         Location target = randomizedNearby(near, 24, 96);
         if (target == null) {
             return null;
         }
 
-        Material ore = chooseOre(target.getWorld(),
+        Material ore = resolveOreType(target.getWorld(), oreType,
                 inv.getStringList("investigation-tools.oresummon.allowed-blocks"));
         if (ore == null) {
             return null;
@@ -185,41 +301,113 @@ public final class InvestigationManager {
 
         TestObject object = new TestObject(TestObject.Type.ORE, target, staff.getName(), cleanupAtMillis());
         Block base = target.getBlock();
-        // Build a small randomized vein around the base block.
-        for (int i = 0; i < count; i++) {
-            Block b = base.getRelative(random.nextInt(3) - 1, random.nextInt(3) - 1, random.nextInt(3) - 1);
-            if (b.getType().isSolid() || b.getType() == Material.STONE
-                    || b.getType().name().contains("DEEPSLATE") || b.getType().name().contains("NETHERRACK")) {
-                object.rememberBlock(b.getLocation(), b.getType());
-                b.setType(ore, false);
+        // Random-walk a blob vein from the base, placing ore into replaceable blocks.
+        Block cursor = base;
+        int placed = 0;
+        int guard = 0;
+        while (placed < count && guard < count * 8) {
+            guard++;
+            if (isReplaceable(cursor.getType())) {
+                object.rememberBlock(cursor.getLocation(), cursor.getType());
+                cursor.setType(ore, false);
+                placed++;
+            }
+            cursor = cursor.getRelative(random.nextInt(3) - 1, random.nextInt(3) - 1, random.nextInt(3) - 1);
+            if (random.nextInt(5) == 0) {
+                cursor = base; // occasionally restart near the origin for a tighter blob
             }
         }
         objects.add(object);
-        log(staff, "oresummon", object, "ore=" + ore + " count=" + count);
+        log(staff, "oresummon", object, "ore=" + ore + " count=" + placed);
         return object;
     }
 
-    private Material chooseOre(World world, List<String> allowed) {
+    private boolean isReplaceable(Material type) {
+        if (type == null || type == Material.AIR) {
+            return false;
+        }
+        String n = type.name();
+        return type.isSolid() || n.contains("STONE") || n.contains("DEEPSLATE")
+                || n.contains("NETHERRACK") || n.contains("DIRT") || n.contains("GRANITE")
+                || n.contains("ANDESITE") || n.contains("DIORITE") || n.contains("TUFF");
+    }
+
+    private Material resolveOreType(World world, String oreType, List<String> allowed) {
+        boolean nether = world.getEnvironment() == World.Environment.NETHER;
+        if (oreType != null && !oreType.isEmpty() && !oreType.equalsIgnoreCase("random")) {
+            Material mapped = mapOreAlias(oreType, nether);
+            if (mapped != null) {
+                return mapped;
+            }
+        }
+        // Random from the configured allow-list, respecting the dimension for debris.
         List<Material> options = new ArrayList<>();
         for (String name : allowed) {
             Material material = plugin.versionManager().adapter().resolveMaterial(name);
             if (material == null) {
                 continue;
             }
-            boolean nether = world.getEnvironment() == World.Environment.NETHER;
             boolean isDebris = material.name().contains("ANCIENT_DEBRIS");
-            // Only place ancient debris in the nether; only place ores in overworld/end.
             if (isDebris == nether) {
                 options.add(material);
             }
         }
         if (options.isEmpty()) {
-            Material fallback = plugin.versionManager().adapter().resolveMaterial("DIAMOND_ORE");
-            return world.getEnvironment() == World.Environment.NETHER
-                    ? plugin.versionManager().adapter().resolveMaterial("ANCIENT_DEBRIS")
-                    : fallback;
+            return plugin.versionManager().adapter()
+                    .resolveMaterial(nether ? "ANCIENT_DEBRIS" : "DIAMOND_ORE");
         }
         return options.get(random.nextInt(options.size()));
+    }
+
+    /** Maps a friendly ore alias to a concrete material, deepslate/dimension-aware. */
+    private Material mapOreAlias(String alias, boolean nether) {
+        com.lumen.essentials.version.VersionAdapter adapter = plugin.versionManager().adapter();
+        switch (alias.toLowerCase(java.util.Locale.ROOT)) {
+            case "ancient_debris":
+            case "ancientdebris":
+            case "debris":
+                return first(adapter, "ANCIENT_DEBRIS");
+            case "netherite":
+            case "netherite_block":
+                return first(adapter, "NETHERITE_BLOCK");
+            case "diamond":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_DIAMOND_ORE" : "DIAMOND_ORE", "DIAMOND_ORE");
+            case "diamond_block":
+                return first(adapter, "DIAMOND_BLOCK");
+            case "gold":
+                return nether ? first(adapter, "NETHER_GOLD_ORE", "GOLD_ORE")
+                        : first(adapter, random.nextBoolean() ? "DEEPSLATE_GOLD_ORE" : "GOLD_ORE", "GOLD_ORE");
+            case "gold_block":
+                return first(adapter, "GOLD_BLOCK");
+            case "emerald":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_EMERALD_ORE" : "EMERALD_ORE", "EMERALD_ORE");
+            case "emerald_block":
+                return first(adapter, "EMERALD_BLOCK");
+            case "iron":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_IRON_ORE" : "IRON_ORE", "IRON_ORE");
+            case "iron_block":
+                return first(adapter, "IRON_BLOCK");
+            case "copper":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_COPPER_ORE" : "COPPER_ORE", "COPPER_ORE");
+            case "redstone":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_REDSTONE_ORE" : "REDSTONE_ORE", "REDSTONE_ORE");
+            case "lapis":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_LAPIS_ORE" : "LAPIS_ORE", "LAPIS_ORE");
+            case "coal":
+                return first(adapter, random.nextBoolean() ? "DEEPSLATE_COAL_ORE" : "COAL_ORE", "COAL_ORE");
+            default:
+                return adapter.resolveMaterial(alias); // try a direct material name
+        }
+    }
+
+    private Material first(com.lumen.essentials.version.VersionAdapter adapter, String... names) {
+        for (String name : names) {
+            Material material = adapter.resolveMaterial(name);
+            if (material != null) {
+                return material;
+            }
+        }
+        return null;
     }
 
     // --- Monitoring & cleanup ----------------------------------------------

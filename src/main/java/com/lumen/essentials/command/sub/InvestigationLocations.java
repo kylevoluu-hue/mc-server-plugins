@@ -66,6 +66,17 @@ final class InvestigationLocations {
         return null;
     }
 
+    /**
+     * Like {@link #resolve}, but when no target args are supplied (after stripping a
+     * trailing {@code confirm}) it defaults to the staff member's own location.
+     */
+    static Location resolveOrSelf(LumenEssentials plugin, Player staff, String[] rawArgs) {
+        if (stripConfirm(rawArgs).length == 0) {
+            return staff.getLocation();
+        }
+        return resolve(plugin, staff, rawArgs);
+    }
+
     /** True when confirmation is required and the {@code confirm} token is absent. */
     static boolean needsConfirmation(LumenEssentials plugin, String[] args) {
         boolean require = plugin.configManager().investigation()
