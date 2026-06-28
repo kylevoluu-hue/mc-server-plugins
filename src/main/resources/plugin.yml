@@ -1,0 +1,40 @@
+name: LumenEssentials
+version: '${version}'
+main: com.lumen.essentials.LumenEssentials
+api-version: '1.13'
+author: gangymanny6741
+description: Modular SMP anti-cheat, anti-xray and staff investigation toolkit.
+website: https://github.com/kylevoluu-hue/mc-server-plugins
+folia-supported: false
+
+commands:
+  luac:
+    description: Lumen Essentials main command.
+    usage: /luac help
+    aliases: [lumen]
+
+permissions:
+  luac.admin:
+    description: Full administrative access to Lumen Essentials.
+    default: op
+  luac.alerts:
+    description: Receive anti-cheat staff alerts.
+    default: op
+  luac.debug:
+    description: Toggle and receive verbose debug output.
+    default: op
+  luac.bypass:
+    description: Bypass all checks (trusted players / staff).
+    default: false
+  luac.exempt:
+    description: Manage and hold check exemptions.
+    default: op
+  luac.investigate:
+    description: Use staff investigation tooling.
+    default: op
+  luac.spawnstash:
+    description: Create investigation test stashes.
+    default: op
+  luac.oresummon:
+    description: Create investigation test ore veins.
+    default: op

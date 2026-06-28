@@ -1,0 +1,32 @@
+# =====================================================================
+#  Lumen Essentials - punishments.yml
+#
+#  When a check crosses its punishment-threshold (checks.yml), the commands
+#  below run from CONSOLE with these placeholders substituted:
+#    {player} {check} {vl} {ping} {tps} {world} {x} {y} {z}
+#
+#  'default' runs for any check without a specific entry under 'actions'.
+#  Defaults ship CONSERVATIVE (alert only) to avoid false bans - uncomment
+#  the stronger examples once you trust your tuning.
+# =====================================================================
+
+# Fallback action for any check not listed under 'actions'.
+default:
+  - "say [Lumen] {player} reached the punishment threshold for {check} (vl {vl})."
+
+# Per-check overrides. Examples are commented; enable what your server uses.
+actions:
+  nuker:
+    - "kick {player} Unfair gameplay detected ({check})."
+  # fly:
+  #   - "kick {player} Illegal movement detected ({check})."
+  # speed:
+  #   - "kick {player} Illegal movement detected ({check})."
+  # reach:
+  #   - "say [Lumen] {player} flagged {check} (vl {vl}) at {world} {x},{y},{z}."
+  # autoclicker:
+  #   - "say [Lumen] {player} flagged {check} (vl {vl})."
+  #
+  # Temp/permanent bans require a punishment plugin (e.g. EssentialsX, LiteBans):
+  #   - "tempban {player} 1d Cheating detected ({check})"
+  #   - "ban {player} Cheating detected ({check})"

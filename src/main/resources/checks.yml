@@ -1,0 +1,117 @@
+# =====================================================================
+#  Lumen Essentials - checks.yml
+#
+#  Every check shares the same tunables:
+#    enabled              : turn the check on/off
+#    buffer               : tolerance accumulator before a violation fires
+#                           (raises this to reduce false positives)
+#    threshold            : check-specific limit (see comments per check)
+#    decay                : violation level lost per second (lazy decay)
+#    confidence           : multiplier applied to each violation (0.0 - 1.0+)
+#    alert-threshold      : violation level at which staff are alerted
+#    punishment-threshold : violation level at which punishments run
+#    debug                : emit per-detection diagnostics to /luac debug
+#
+#  Defaults are intentionally CONSERVATIVE - alert early, punish late.
+# =====================================================================
+
+movement:
+  speed:
+    enabled: true
+    # threshold = max horizontal blocks/tick before excess is buffered.
+    threshold: 0.55
+    buffer: 2.0
+    decay: 0.05
+    confidence: 0.7
+    alert-threshold: 6.0
+    punishment-threshold: 25.0
+    debug: false
+
+  fly:
+    enabled: true
+    # threshold = sustained hovering/ascending air-ticks tolerated.
+    threshold: 6.0
+    buffer: 6.0
+    decay: 0.05
+    confidence: 0.8
+    alert-threshold: 5.0
+    punishment-threshold: 20.0
+    debug: false
+
+  nofall:
+    enabled: true
+    threshold: 1.0
+    buffer: 0.0
+    decay: 0.05
+    confidence: 0.6
+    alert-threshold: 4.0
+    punishment-threshold: 20.0
+    debug: false
+
+  timer:
+    enabled: true
+    # threshold = multiplier of a 50ms tick the clock may run fast before flagging.
+    threshold: 6.0
+    buffer: 40.0
+    decay: 0.05
+    confidence: 0.7
+    alert-threshold: 4.0
+    punishment-threshold: 15.0
+    debug: false
+
+combat:
+  reach:
+    enabled: true
+    # threshold = base survival reach (blocks). Ping leniency is added on top.
+    threshold: 3.0
+    buffer: 0.0
+    decay: 0.05
+    confidence: 0.7
+    alert-threshold: 4.0
+    punishment-threshold: 12.0
+    debug: false
+
+  autoclicker:
+    enabled: true
+    # threshold = CPS gate; consistency is only scrutinized above this rate.
+    threshold: 9.0
+    buffer: 0.0
+    decay: 0.04
+    confidence: 0.6
+    alert-threshold: 4.0
+    punishment-threshold: 12.0
+    debug: false
+
+world:
+  fastbreak:
+    enabled: true
+    # threshold = minimum plausible ms between two solid-block breaks.
+    threshold: 90.0
+    buffer: 4.0
+    decay: 0.05
+    confidence: 0.7
+    alert-threshold: 5.0
+    punishment-threshold: 20.0
+    debug: false
+
+  nuker:
+    enabled: true
+    # threshold = max blocks broken within a 250ms window.
+    threshold: 6.0
+    buffer: 0.0
+    decay: 0.05
+    confidence: 0.8
+    alert-threshold: 3.0
+    punishment-threshold: 8.0
+    debug: false
+
+  scaffold:
+    enabled: true
+    # threshold = ms between places considered "fast" while bridging.
+    threshold: 110.0
+    buffer: 4.0
+    decay: 0.05
+    confidence: 0.6
+    alert-threshold: 5.0
+    punishment-threshold: 20.0
+    debug: false
