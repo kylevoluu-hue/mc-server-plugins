@@ -1,0 +1,56 @@
+# =====================================================================
+#  Lumen Essentials - config.yml (general settings)
+#  Supports /luac reload (hot reload).
+# =====================================================================
+
+# General logging behavior. Violation/ore/investigation logs are written
+# asynchronously and batched to the plugin's /logs folder.
+logging:
+  # Record each player's reported client brand on join (investigation.log).
+  log-client-brand: true
+
+# ---------------------------------------------------------------------
+# Anti-Xray (behavioral / forensic layer).
+#
+# This module logs valuable-ore discoveries, builds a suspicion score and
+# raises STAFF ALERTS ONLY - it never bans on its own. For engine-level ore
+# obfuscation, also enable Paper's built-in anti-xray in paper-world-defaults.yml;
+# the two are complementary.
+# ---------------------------------------------------------------------
+anti-xray:
+  enabled: true
+
+  # Per-world control. If 'worlds' is empty, every world is covered.
+  # world-whitelist=true  -> only the listed worlds are covered.
+  # world-whitelist=false -> all worlds EXCEPT the listed ones are covered.
+  world-whitelist: false
+  worlds: []
+
+  # Maximum number of recent discoveries kept in memory for /luac orelog.
+  max-log-entries: 200
+
+  # How suspicion accumulates. Fully-enclosed ("unexposed") valuables are far
+  # more telling than ones already exposed to a cave/air, which honest players
+  # can legitimately see.
+  suspicion:
+    unexposed-weight: 1.0
+    exposed-weight: 0.05
+    # When a player's xray suspicion crosses this, staff receive an alert.
+    alert-threshold: 12.0
+
+  # Blocks treated as "valuable" for logging and suspicion. Names are version
+  # safe: any that do not exist on your server version are silently ignored.
+  protected-blocks:
+    - DIAMOND_ORE
+    - DEEPSLATE_DIAMOND_ORE
+    - ANCIENT_DEBRIS
+    - EMERALD_ORE
+    - DEEPSLATE_EMERALD_ORE
+    - GOLD_ORE
+    - DEEPSLATE_GOLD_ORE
+    - NETHER_GOLD_ORE
+    - SPAWNER
+    - CHEST
+    - TRAPPED_CHEST
+    - BARREL
+    - SHULKER_BOX

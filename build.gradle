@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.lumen'
+version = '1.0.0'
+description = 'Lumen Essentials - modular SMP anti-cheat, anti-xray and staff investigation toolkit'
+
+java {
+    // Target Java 17 bytecode for broad server compatibility. We compile with
+    // whatever JDK runs Gradle (17+) using --release so no extra toolchain download
+    // is required.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'papermc'
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+    maven {
+        name = 'purpur'
+        url = 'https://repo.purpurmc.org/snapshots'
+    }
+    maven {
+        name = 'sonatype'
+        url = 'https://oss.sonatype.org/content/groups/public/'
+    }
+}
+
+dependencies {
+    // Paper API also exposes Bukkit/Spigot API surfaces we compile against.
+    compileOnly 'io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT'
+    compileOnly 'org.jetbrains:annotations:24.1.0'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+    options.compilerArgs += ['-Xlint:none']
+}
+
+processResources {
+    def props = [version: project.version]
+    inputs.properties(props)
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(props)
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    archiveBaseName.set('LumenEssentials')
+}
+
+tasks.named('build') {
+    dependsOn(tasks.named('shadowJar'))
+}

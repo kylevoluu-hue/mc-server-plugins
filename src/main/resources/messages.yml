@@ -1,0 +1,11 @@
+# =====================================================================
+#  Lumen Essentials - messages.yml
+#  Supports & color codes. Placeholders are shown per message.
+# =====================================================================
+
+# Shown when a sender lacks permission for a subcommand.
+no-permission: "&cYou do not have permission to use that."
+
+# Staff alert line. Placeholders:
+#   {player} {check} {vl} {ping} {tps} {world} {x} {y} {z}
+alert-format: "&8[&bLumen&8] &e{player} &7failed &c{check} &7(&fvl {vl}&7) &8| &7ping {ping}ms tps {tps}"

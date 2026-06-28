@@ -1,0 +1,42 @@
+# =====================================================================
+#  Lumen Essentials - investigation.yml
+#
+#  Staff-only controlled investigation tooling. These tools place TEMPORARY,
+#  hidden test objects to study suspected xray / ESP / stash-finder behavior.
+#  They are gated behind permissions, fully logged, and cleaned up on a timer.
+# =====================================================================
+
+investigation-tools:
+  enabled: true
+
+  # Log every creation/discovery/cleanup to logs/investigation.log.
+  log-all-actions: true
+
+  # Require an explicit "confirm" token before placing a test object.
+  require-confirmation: true
+
+  # Auto-remove test objects (restoring the original blocks) after a delay.
+  temporary-test-objects: true
+  cleanup-after-minutes: 60
+
+  # How close a non-staff player must get to a test object to count as a
+  # "discovery" (blocks).
+  discovery-radius: 4.0
+
+  spawnstash:
+    enabled: true
+    # Loot richness: low | medium | high.
+    max-loot-value: medium
+    min-distance-from-player: 32
+    max-distance-from-player: 128
+
+  oresummon:
+    enabled: true
+    min-ores: 3
+    max-ores: 12
+    # Allowed blocks; ancient debris is only placed in the Nether, ores only
+    # outside it. Names that don't exist on your version are ignored.
+    allowed-blocks:
+      - DIAMOND_ORE
+      - DEEPSLATE_DIAMOND_ORE
+      - ANCIENT_DEBRIS
