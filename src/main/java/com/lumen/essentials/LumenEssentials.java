@@ -15,6 +15,7 @@ import com.lumen.essentials.investigation.InvestigationManager;
 import com.lumen.essentials.listener.CombatListener;
 import com.lumen.essentials.listener.ConnectionListener;
 import com.lumen.essentials.listener.MovementListener;
+import com.lumen.essentials.listener.SilkSpawnerListener;
 import com.lumen.essentials.listener.WorldListener;
 import com.lumen.essentials.player.PlayerDataManager;
 import com.lumen.essentials.punishments.PunishmentManager;
@@ -140,6 +141,7 @@ public final class LumenEssentials extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WorldListener(this), this);
         getServer().getPluginManager().registerEvents(new CombatListener2(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new SilkSpawnerListener(this), this);
     }
 
     private void registerFeatureCommands() {

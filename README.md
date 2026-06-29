@@ -56,6 +56,8 @@ in a single plugin.
     warmup countdowns and cooldowns.
   - **Anti-combat-log** with a neon-blue boss-bar timer that blocks teleporting and
     kills players who log out in combat.
+  - **Silk-touch spawners** — harvest mob spawners (mob type preserved) with a Silk
+    Touch tool.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -226,6 +228,7 @@ in `features.yml`.
 | `lumen.rtp.admin`  | op      | Configure random teleport                 |
 | `lumen.tpa`        | true    | Use teleport requests                     |
 | `lumen.tp`         | op      | Staff teleport                            |
+| `lumen.silkspawner`| true    | Harvest spawners with Silk Touch          |
 
 ---
 

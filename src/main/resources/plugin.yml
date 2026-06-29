@@ -117,3 +117,6 @@ permissions:
   lumen.tp:
     description: Use staff teleport.
     default: op
+  lumen.silkspawner:
+    description: Harvest mob spawners with Silk Touch.
+    default: true

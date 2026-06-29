@@ -57,6 +57,24 @@ teleport:
   message-request-received: "&e{player} &7wants to teleport to you. &a/tpaccept&7."
 
 # ---------------------------------------------------------------------
+# Silk-touch spawners. Mining a mob spawner with a Silk Touch tool drops a
+# spawner item that remembers its mob type; placing it restores that mob.
+# Requires the lumen.silkspawner permission (default: true).
+# ---------------------------------------------------------------------
+silk-spawners:
+  enabled: true
+  # Require a Silk Touch tool to collect the spawner (recommended).
+  require-silk-touch: true
+  # Minimum Silk Touch level required.
+  min-silk-level: 1
+  # Drop the spawner's experience as well (normally suppressed on harvest).
+  drop-xp: false
+  # Per-world control. Empty 'worlds' = every world.
+  # world-whitelist=true  -> only listed worlds; false -> all but listed.
+  world-whitelist: false
+  worlds: []
+
+# ---------------------------------------------------------------------
 # Random teleport. /rtp scatters the player around a center point in the
 # survival world. Designed to be lag-safe: candidate locations are
 # validated against the highest block and a bounded number of attempts is
