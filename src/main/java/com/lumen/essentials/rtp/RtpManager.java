@@ -84,10 +84,11 @@ public final class RtpManager {
             return false;
         }
 
-        player.teleport(safe);
+        // Set the RTP cooldown now (prevents spamming the search), then run the
+        // shared warmup countdown so the player sees the teleport timer.
         cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
-        MessageUtil.send(player, "&aTeleported to &f" + safe.getBlockX() + ", "
-                + safe.getBlockY() + ", " + safe.getBlockZ() + "&a.");
+        plugin.teleportManager().beginWarmupExternalCooldown(player, safe,
+                () -> plugin.teleportManager().sendTeleportMessage(player, "&aRandomly teleported!"));
         return true;
     }
 

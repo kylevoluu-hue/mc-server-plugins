@@ -59,8 +59,11 @@ in a single plugin.
   - **Silk-touch spawners** — harvest mob spawners (mob type preserved) with a Silk
     Touch tool.
   - **Personal settings menu** (`/settings`) — per-player toggles (night vision,
-    hostile-mob spawning, hide chat, block teleport requests, instant respawn, and
-    client-side preferences).
+    hostile-mob spawning, hide chat, block teleport requests, instant respawn,
+    teleport messages, and client-side preferences).
+  - **Coins + Keys economy** — earn Keys by playtime, earn Coins in AFK zones, open
+    rarity-tiered **crates** with weighted rewards, and spend Coins in the
+    **`/merchant`** shop. Fully config-driven with many setup commands.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -186,6 +189,15 @@ Standalone player-facing commands (separate from `/luac`):
 | `/tpauto`                       | `lumen.tpa`        | Toggle auto-accepting requests               |
 | `/tp <player>` / `<p1> <p2>` / `<x y z>` | `lumen.tp` | Staff teleport                             |
 | `/settings`                     | `lumen.settings`   | Open the personal settings toggle menu       |
+| `/coins [player]`               | `lumen.economy`    | View Coins balance                           |
+| `/coins give\|take\|set <p> <n>` | `lumen.economy.admin` | Manage Coins                              |
+| `/keys`                         | `lumen.economy`    | View your keys                               |
+| `/key give\|take\|set <p> <id> <n>` | `lumen.economy.admin` | Manage player keys                    |
+| `/crates` / `/crate [open <id>]`| `lumen.economy`    | Open the crates menu / open a crate          |
+| `/crate reload`                 | `lumen.economy.admin` | Reload economy config                     |
+| `/merchant`                     | `lumen.economy`    | Open the Coin shop                           |
+| `/afkzone pos1\|pos2\|create\|remove\|setreward\|list` | `lumen.afkzone.admin` | Manage AFK zones |
+| `/economy reload`               | `lumen.economy.admin` | Reload the economy                        |
 
 Notes:
 
@@ -213,6 +225,8 @@ shown in the item). Settings persist per player in `settings.yml`.
 - **Hide Global Chat** — removes you from global chat recipients.
 - **Teleport Requests** — blocks incoming `/tpa` / `/tpahere` to you.
 - **Instant Respawn** — respawns you immediately on death.
+- **Teleport Messages** — toggles the "Teleported"/"Warped" confirmation messages
+  (teleports never print raw coordinates).
 
 **Stored as client-cooperative preferences** (these are inherently client-side, so
 the server persists the flag and exposes it; a companion client/resource layer
@@ -221,12 +235,50 @@ Coords, Hurt Cam.
 
 ### Anti-combat-log
 
-Dealing or taking PvP damage tags both players for a configurable duration, shown on
-a neon-blue boss bar (`Combat : {time}`). Each new hit resets the timer. While tagged,
-teleport/warp/spawn commands are blocked. Disconnecting while tagged **kills the
-player** (they drop items per server rules and respawn at their spawn on next login)
-and can optionally run extra punishment commands. All tunables live under `combat:`
-in `features.yml`.
+Dealing or taking PvP damage tags both players for **20 seconds** (configurable),
+shown on a **neon-blue boss-bar countdown** (`Combat : {time}`). Each new hit resets
+the timer. While tagged, teleport/warp/spawn commands are blocked. Disconnecting while
+tagged **kills the player** (they drop items per server rules and respawn at spawn on
+next login) and can optionally run extra punishment commands. All tunables live under
+`combat:` in `features.yml`.
+
+### Teleport countdowns
+
+`/tpa`/`/tpahere` (on accept), `/warp` and `/rtp` all run through a shared warmup that
+shows a **neon-yellow boss-bar countdown** and cancels (neon-red message) if you move
+or take combat damage. Per-player cooldowns are configurable in `features.yml`.
+
+### Economy: Coins, Keys, Crates, AFK zones & Merchant
+
+A self-contained virtual economy (no physical items, no real-money/shards):
+
+- **Keys** are per-type counters earned **only by playtime** (e.g. one Common Key per
+  hour online). View them with `/keys`.
+- **Crates** (`/crates`) are rarity/difficulty-tiered. Opening one consumes its key
+  and rolls a **weighted reward** (coins, another key, or a console command).
+- **Coins** are earned in **AFK zones** (operator-defined cuboids that pay out over
+  time) and spent in the **`/merchant`** shop (`/merchant`).
+- Everything is defined in **`economy.yml`** (keys, crates, merchant items, playtime
+  rewards, AFK payout). Player balances persist in `economy-data.yml`.
+
+#### Setup tutorial
+
+1. **Edit `economy.yml`** to define your keys, crates and merchant items (the shipped
+   defaults — common/rare/legendary — are a working example). Set playtime key
+   rewards under `playtime-rewards` and AFK payout under `afk-zone`.
+2. **Reload:** `/economy reload` (or `/luac reload`).
+3. **Create an AFK zone:** stand at one corner and run `/afkzone pos1`, move to the
+   opposite corner and run `/afkzone pos2`, then `/afkzone create spawnafk`.
+   Optionally `/afkzone setreward spawnafk 25` to override its Coin payout. Players
+   standing in the zone now earn Coins every interval.
+4. **Test it:** `/key give <you> common 1`, then `/crates` and open the Common Crate;
+   `/coins give <you> 5000`, then `/merchant` to buy.
+5. **Grant access:** `lumen.economy` (default true) lets players use coins/keys/
+   crates/merchant; `lumen.economy.admin` and `lumen.afkzone.admin` (op) gate the
+   management commands.
+
+Admin commands: `/coins give|take|set <player> <amount>`, `/key give|take|set <player>
+<keyId> <amount>`, `/afkzone …`, `/economy reload`.
 
 ---
 
@@ -253,6 +305,9 @@ in `features.yml`.
 | `lumen.tp`         | op      | Staff teleport                            |
 | `lumen.silkspawner`| true    | Harvest spawners with Silk Touch          |
 | `lumen.settings`   | true    | Open the personal settings menu           |
+| `lumen.economy`    | true    | Use coins, keys, crates, merchant         |
+| `lumen.economy.admin`| op    | Manage coins/keys, reload economy         |
+| `lumen.afkzone.admin`| op    | Create/manage AFK zones                   |
 
 ---
 
@@ -271,8 +326,10 @@ Hot-reloadable files are generated on first run:
 - **`investigation.yml`** — investigation tooling (confirmation, cleanup timer,
   loot value, distances, allowed ore blocks).
 - **`features.yml`** — SMP features: combat tag, teleport warmup/cooldowns, RTP
-  center/radius, and warp settings.
-- **`warps.yml` / `flags.yml`** — runtime data stores (written by the plugin).
+  center/radius, silk-spawners, and warp settings.
+- **`economy.yml`** — keys, crates, merchant items, playtime rewards, AFK payouts.
+- **`warps.yml` / `flags.yml` / `settings.yml` / `economy-data.yml`** — runtime data
+  stores (written by the plugin).
 
 Run `/luac reload` to apply changes without a restart.
 

@@ -18,9 +18,11 @@ public final class ConfigManager {
     private final ConfigFile investigation;
     private final ConfigFile features;
     // Runtime data stores (written to by the plugin, not shipped defaults).
+    private final ConfigFile economy;
     private final ConfigFile warps;
     private final ConfigFile flags;
     private final ConfigFile settings;
+    private final ConfigFile economyData;
 
     public ConfigManager(Plugin plugin) {
         this.config = new ConfigFile(plugin, "config.yml");
@@ -29,9 +31,11 @@ public final class ConfigManager {
         this.punishments = new ConfigFile(plugin, "punishments.yml");
         this.investigation = new ConfigFile(plugin, "investigation.yml");
         this.features = new ConfigFile(plugin, "features.yml");
+        this.economy = new ConfigFile(plugin, "economy.yml");
         this.warps = new ConfigFile(plugin, "warps.yml", true);
         this.flags = new ConfigFile(plugin, "flags.yml", true);
         this.settings = new ConfigFile(plugin, "settings.yml", true);
+        this.economyData = new ConfigFile(plugin, "economy-data.yml", true);
     }
 
     public void loadAll() {
@@ -41,9 +45,11 @@ public final class ConfigManager {
         punishments.load();
         investigation.load();
         features.load();
+        economy.load();
         warps.load();
         flags.load();
         settings.load();
+        economyData.load();
     }
 
     public void reloadAll() {
@@ -53,9 +59,11 @@ public final class ConfigManager {
         punishments.reload();
         investigation.reload();
         features.reload();
+        economy.reload();
         warps.reload();
         flags.reload();
         settings.reload();
+        economyData.reload();
     }
 
     public FileConfiguration config() {
@@ -104,6 +112,18 @@ public final class ConfigManager {
 
     public void saveSettings() {
         settings.save();
+    }
+
+    public FileConfiguration economy() {
+        return economy.get();
+    }
+
+    public FileConfiguration economyData() {
+        return economyData.get();
+    }
+
+    public void saveEconomyData() {
+        economyData.save();
     }
 
     /** Convenience accessor for a message string with a fallback. */

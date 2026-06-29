@@ -160,10 +160,100 @@ public final class InvestigationManager {
         }
     }
 
-    private void placeContainer(TestObject object, Block block, String type, int scale, String size) {
-        object.rememberBlock(block.getLocation(), block.getType());
-        block.setType(containerMaterial(type), false);
-        fillContainer(block, size, scale);
+    /**
+     * Builds a realistic hidden storage stash: a small dug-out, lit room with the
+     * chosen container type arranged in neat rows along one or more walls - the way a
+     * player actually organizes storage. The room size, which walls are lined, the
+     * spacing, the lighting and the loot are all randomized so no two stashes look the
+     * same (less obvious to a watching moderator).
+     */
+    private void placeContainer(TestObject object, Block base, String type, int scale, String size) {
+        int half = Math.max(1, baseHalf(scale));
+        int height = Math.max(3, baseHeight(scale) - 1);
+        Material[] mats = buildingMaterials(base.getWorld());
+        buildRoomShell(object, base, half, height, mats[0], mats[1]);
+
+        // Doorway in one wall.
+        setBlock(object, base.getRelative(half + 1, 0, 0), Material.AIR);
+        setBlock(object, base.getRelative(half + 1, 1, 0), Material.AIR);
+
+        Material container = containerMaterial(type);
+        Material light = firstMaterial("LANTERN", "TORCH", "GLOWSTONE", "SHROOMLIGHT");
+
+        // Pick a random subset of the four walls to line with storage.
+        List<Integer> wallOrder = new ArrayList<>(java.util.Arrays.asList(0, 1, 2, 3));
+        java.util.Collections.shuffle(wallOrder, random);
+        int wallCount = 1 + random.nextInt(4);
+        boolean[] lined = new boolean[4];
+        for (int i = 0; i < wallCount; i++) {
+            lined[wallOrder.get(i)] = true;
+        }
+
+        int torchEvery = 3 + random.nextInt(3);
+        int placed = 0;
+        for (int w = 0; w < 4; w++) {
+            if (!lined[w]) {
+                continue;
+            }
+            for (int t = -half; t <= half; t++) {
+                int dx;
+                int dz;
+                switch (w) {
+                    case 0: dx = -half; dz = t; break;
+                    case 1: dx = half; dz = t; break;
+                    case 2: dx = t; dz = -half; break;
+                    default: dx = t; dz = half; break;
+                }
+                // Keep the doorway clear.
+                if (dx == half && dz == 0) {
+                    continue;
+                }
+                Block at = base.getRelative(dx, 0, dz);
+                if (light != null && Math.floorMod(t + half, torchEvery) == 0) {
+                    setBlock(object, at, light); // a light every few blocks
+                } else if (random.nextInt(7) != 0) { // occasional gap for realism
+                    setBlock(object, at, container);
+                    fillContainer(at, size, scale);
+                    placed++;
+                }
+            }
+        }
+
+        // Guarantee at least a couple of containers even on a tiny/unlucky roll.
+        if (placed < 2) {
+            for (int d = -half; d <= half && placed < 2; d++) {
+                Block at = base.getRelative(d, 0, -half);
+                setBlock(object, at, container);
+                fillContainer(at, size, scale);
+                placed++;
+            }
+        }
+
+        // A central ceiling light.
+        if (light != null) {
+            setBlock(object, base.getRelative(0, height - 1, 0), light);
+        }
+    }
+
+    /** Carves a hollow room (floor, four walls, ceiling) out of the terrain. */
+    private void buildRoomShell(TestObject object, Block base, int half, int height,
+                                Material wall, Material floor) {
+        for (int dx = -half - 1; dx <= half + 1; dx++) {
+            for (int dz = -half - 1; dz <= half + 1; dz++) {
+                for (int dy = -1; dy <= height; dy++) {
+                    Block b = base.getRelative(dx, dy, dz);
+                    boolean edgeX = dx == -half - 1 || dx == half + 1;
+                    boolean edgeZ = dz == -half - 1 || dz == half + 1;
+                    boolean isFloor = dy == -1;
+                    boolean isCeiling = dy == height;
+                    if (edgeX || edgeZ || isFloor || isCeiling) {
+                        setBlock(object, b, isFloor ? floor : wall);
+                    } else {
+                        setBlock(object, b, Material.AIR);
+                    }
+                }
+            }
+        }
     }
 
     private void placeSpawner(TestObject object, Block block, int scale) {
@@ -213,26 +303,9 @@ public final class InvestigationManager {
         int half = baseHalf(scale);     // interior reaches +/- half on x/z
         int height = baseHeight(scale); // interior wall height
         Material[] mats = buildingMaterials(base.getWorld());
-        Material wall = mats[0];
-        Material floor = mats[1];
 
         // 1) Shell + hollow interior.
-        for (int dx = -half - 1; dx <= half + 1; dx++) {
-            for (int dz = -half - 1; dz <= half + 1; dz++) {
-                for (int dy = -1; dy <= height; dy++) {
-                    Block b = base.getRelative(dx, dy, dz);
-                    boolean edgeX = dx == -half - 1 || dx == half + 1;
-                    boolean edgeZ = dz == -half - 1 || dz == half + 1;
-                    boolean isFloor = dy == -1;
-                    boolean isCeiling = dy == height;
-                    if (edgeX || edgeZ || isFloor || isCeiling) {
-                        setBlock(object, b, isFloor ? floor : wall);
-                    } else {
-                        setBlock(object, b, Material.AIR); // carve the room
-                    }
-                }
-            }
-        }
+        buildRoomShell(object, base, half, height, mats[0], mats[1]);
 
         // 2) Doorway: a 1x2 opening in the middle of one wall.
         int wallX = half + 1;

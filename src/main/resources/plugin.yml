@@ -68,6 +68,38 @@ commands:
     description: Open your personal settings menu.
     usage: /settings
     permission: lumen.settings
+  coins:
+    description: View or manage Coins.
+    usage: /coins [player] | give|take|set <player> <amount>
+    permission: lumen.economy
+  keys:
+    description: View your keys.
+    usage: /keys
+    permission: lumen.economy
+  key:
+    description: Manage player keys.
+    usage: /key <give|take|set> <player> <keyId> <amount>
+    permission: lumen.economy.admin
+  crates:
+    description: Open the crates menu.
+    usage: /crates
+    permission: lumen.economy
+  crate:
+    description: Open or manage crates.
+    usage: /crate [open <id>|reload]
+    permission: lumen.economy
+  merchant:
+    description: Open the merchant shop.
+    usage: /merchant
+    permission: lumen.economy
+  afkzone:
+    description: Manage AFK zones.
+    usage: /afkzone <pos1|pos2|create|remove|setreward|list>
+    permission: lumen.afkzone.admin
+  economy:
+    description: Economy admin.
+    usage: /economy reload
+    permission: lumen.economy.admin
 
 permissions:
   luac.admin:
@@ -127,3 +159,12 @@ permissions:
   lumen.settings:
     description: Open the personal settings menu.
     default: true
+  lumen.economy:
+    description: Use coins, keys, crates and the merchant.
+    default: true
+  lumen.economy.admin:
+    description: Manage coins, keys and reload the economy.
+    default: op
+  lumen.afkzone.admin:
+    description: Create and manage AFK zones.
+    default: op

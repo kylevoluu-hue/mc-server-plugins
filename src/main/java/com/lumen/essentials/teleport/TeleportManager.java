@@ -36,6 +36,7 @@ public final class TeleportManager {
         int secondsLeft;
         Location destination;
         Runnable onComplete;
+        boolean applyCooldown = true;
     }
 
     public TeleportManager(LumenEssentials plugin) {
@@ -83,12 +84,22 @@ public final class TeleportManager {
         }
         if (request.here()) {
             // Target teleports to the requester.
-            beginWarmup(target, requester.getLocation(), null);
+            beginWarmup(target, requester.getLocation(),
+                    () -> sendTeleportMessage(target, "&aTeleported to &f" + requester.getName() + "&a."));
         } else {
             // Requester teleports to the target.
-            beginWarmup(requester, target.getLocation(), null);
+            beginWarmup(requester, target.getLocation(),
+                    () -> sendTeleportMessage(requester, "&aTeleported to &f" + target.getName() + "&a."));
         }
         return true;
+    }
+
+    /** Sends a teleport confirmation only if the player has teleport messages enabled. */
+    public void sendTeleportMessage(Player player, String message) {
+        if (plugin.settingsManager().isEnabled(player.getUniqueId(),
+                com.lumen.essentials.settings.SettingType.TELEPORT_MESSAGES)) {
+            MessageUtil.send(player, message);
+        }
     }
 
     public boolean toggleAuto(Player player) {
@@ -116,11 +127,25 @@ public final class TeleportManager {
                     "&cYou must wait &f{time}s&c.").replace("{time}", String.valueOf(remaining)));
             return;
         }
+        startWarmup(player, destination, onComplete, true);
+    }
+
+    /**
+     * Warmup countdown for callers that manage their own cooldown (e.g. RTP). Skips
+     * the shared teleport cooldown check and does not set it on completion.
+     */
+    public void beginWarmupExternalCooldown(Player player, Location destination, Runnable onComplete) {
+        if (destination != null) {
+            startWarmup(player, destination, onComplete, false);
+        }
+    }
+
+    private void startWarmup(Player player, Location destination, Runnable onComplete, boolean applyCooldown) {
         cancelWarmup(player.getUniqueId(), null); // replace any existing warmup
 
         int warmupSeconds = cfg().getInt("teleport.warmup-seconds", 3);
         if (warmupSeconds <= 0) {
-            complete(player, destination, onComplete);
+            complete(player, destination, onComplete, applyCooldown);
             return;
         }
 
@@ -129,6 +154,7 @@ public final class TeleportManager {
         warmup.secondsLeft = warmupSeconds;
         warmup.destination = destination;
         warmup.onComplete = onComplete;
+        warmup.applyCooldown = applyCooldown;
         warmup.bar = createBar(warmupSeconds);
         if (warmup.bar != null) {
             try {
@@ -171,16 +197,19 @@ public final class TeleportManager {
         if (warmup.secondsLeft <= 0) {
             Location dest = warmup.destination;
             Runnable onComplete = warmup.onComplete;
+            boolean applyCooldown = warmup.applyCooldown;
             cancelWarmup(uuid, null); // tears down bar + task
-            complete(player, dest, onComplete);
+            complete(player, dest, onComplete, applyCooldown);
             return;
         }
         updateBar(warmup);
     }
 
-    private void complete(Player player, Location destination, Runnable onComplete) {
+    private void complete(Player player, Location destination, Runnable onComplete, boolean applyCooldown) {
         player.teleport(destination);
-        cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+        if (applyCooldown) {
+            cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+        }
         if (onComplete != null) {
             onComplete.run();
         }

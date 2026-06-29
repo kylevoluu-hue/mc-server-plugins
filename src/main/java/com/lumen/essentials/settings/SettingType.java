@@ -42,7 +42,10 @@ public enum SettingType {
             "Respawn instantly when you die."),
 
     HURT_CAM("hurt-cam", "Hurt Cam", "REDSTONE", false, true,
-            "Disable FOV effects and reduce hurt motion.");
+            "Disable FOV effects and reduce hurt motion."),
+
+    TELEPORT_MESSAGES("teleport-messages", "Teleport Messages", "ENDER_EYE", true, false,
+            "Show a confirmation message when you teleport.");
 
     private final String key;
     private final String displayName;

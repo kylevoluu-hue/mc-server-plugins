@@ -1,0 +1,96 @@
+# =====================================================================
+#  Lumen Essentials - economy.yml
+#
+#  Coins + Keys economy. Keys are earned only by PLAYTIME (no shards/money).
+#  Coins are earned in AFK zones and spent in /merchant. Both are virtual
+#  counters - there are no physical key/coin items.
+#
+#  Setup quick-start:
+#    1. Define your keys below (id -> display/rarity/icon).
+#    2. Define crates that consume a key and roll weighted rewards.
+#    3. Define merchant items players can buy with Coins.
+#    4. Set playtime key rewards + AFK coin payouts.
+#    5. In-game: stand in two corners and run /afkzone pos1, /afkzone pos2,
+#       then /afkzone create <name>. Use /economy reload after editing this file.
+# =====================================================================
+
+# Keys granted per completed playtime interval (while online).
+playtime-rewards:
+  enabled: true
+  interval-minutes: 60   # award every hour of online time
+  keys:
+    common: 1
+    # rare: 1            # uncomment to also grant a rare key hourly
+
+# AFK zones pay Coins over time. Create zones in-game (see top of file).
+afk-zone:
+  enabled: true
+  interval-seconds: 60       # pay every 60 seconds
+  coins-per-interval: 10     # default payout (override per-zone with /afkzone setreward)
+  require-actually-afk: false # if true, players who keep moving earn nothing
+
+# ---------------------------------------------------------------------
+# Key types. id is what commands/crates reference (e.g. /key give p common 1).
+# ---------------------------------------------------------------------
+keys:
+  common:
+    display: "&aCommon Key"
+    rarity: COMMON
+    icon: TRIPWIRE_HOOK
+  rare:
+    display: "&9Rare Key"
+    rarity: RARE
+    icon: TRIPWIRE_HOOK
+  legendary:
+    display: "&6Legendary Key"
+    rarity: LEGENDARY
+    icon: TRIPWIRE_HOOK
+
+# ---------------------------------------------------------------------
+# Crates. Each consumes one of its 'key' and rolls a weighted reward.
+# Reward types: coins | key | command. weight = relative chance.
+# Placeholders in commands: {player}.
+# ---------------------------------------------------------------------
+crates:
+  common:
+    display: "&aCommon Crate"
+    rarity: COMMON
+    difficulty: EASY
+    key: common
+    icon: CHEST
+    rewards:
+      - { weight: 60, type: coins, amount: 100, message: "&a+100 Coins!" }
+      - { weight: 30, type: coins, amount: 250, message: "&a+250 Coins!" }
+      - { weight: 10, type: key, key: rare, amount: 1, message: "&9You won a Rare Key!" }
+  rare:
+    display: "&9Rare Crate"
+    rarity: RARE
+    difficulty: MEDIUM
+    key: rare
+    icon: CHEST
+    rewards:
+      - { weight: 50, type: coins, amount: 500, message: "&a+500 Coins!" }
+      - { weight: 35, type: coins, amount: 1000, message: "&a+1000 Coins!" }
+      - { weight: 15, type: key, key: legendary, amount: 1, message: "&6You won a Legendary Key!" }
+  legendary:
+    display: "&6Legendary Crate"
+    rarity: LEGENDARY
+    difficulty: HARD
+    key: legendary
+    icon: ENDER_CHEST
+    rewards:
+      - { weight: 70, type: coins, amount: 2500, message: "&a+2500 Coins!" }
+      - { weight: 25, type: coins, amount: 5000, message: "&a+5000 Coins!" }
+      - { weight: 5, type: command, command: "say {player} hit the LEGENDARY jackpot!", message: "&6JACKPOT!" }
+
+# ---------------------------------------------------------------------
+# Merchant shop. Items bought with Coins. slot = inventory slot (0-53).
+# type: key | coins | command.
+# ---------------------------------------------------------------------
+merchant:
+  title: "&8Merchant"
+  items:
+    - { slot: 10, icon: TRIPWIRE_HOOK, name: "&aCommon Key", lore: ["&7Buy a common key."], price: 500, type: key, key: common, amount: 1 }
+    - { slot: 12, icon: TRIPWIRE_HOOK, name: "&9Rare Key", lore: ["&7Buy a rare key."], price: 2000, type: key, key: rare, amount: 1 }
+    - { slot: 14, icon: TRIPWIRE_HOOK, name: "&6Legendary Key", lore: ["&7Buy a legendary key."], price: 8000, type: key, key: legendary, amount: 1 }
+    - { slot: 16, icon: NETHER_STAR, name: "&bMystery Reward", lore: ["&7Runs a custom command."], price: 1500, type: command, command: "say {player} bought the mystery reward!" }

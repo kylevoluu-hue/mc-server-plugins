@@ -11,8 +11,8 @@
 # ---------------------------------------------------------------------
 combat:
   enabled: true
-  # Seconds a player stays in combat after the most recent hit.
-  duration-seconds: 15
+  # Seconds a player stays in combat after the most recent hit (resets on each hit).
+  duration-seconds: 20
   # Boss bar color (BLUE = neon blue). Bukkit BarColor values.
   bar-color: BLUE
   bar-title: "&bCombat : &f{time}"

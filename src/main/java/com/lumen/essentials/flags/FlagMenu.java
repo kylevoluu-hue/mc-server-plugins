@@ -115,7 +115,8 @@ public final class FlagMenu extends Menu {
         }
         player.closeInventory();
         player.teleport(destination);
-        MessageUtil.send(player, "&aTeleported to &f" + flag.targetName() + "&a.");
+        plugin.teleportManager().sendTeleportMessage(player,
+                "&aTeleported to &f" + flag.targetName() + "&a.");
     }
 
     private void removeFlag(Player player, Flag flag) {

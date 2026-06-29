@@ -142,7 +142,7 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
         }
         final String label = warpName;
         plugin.teleportManager().beginWarmup(player, destination,
-                () -> MessageUtil.send(player, "&aWarped to &f" + label + "&a."));
+                () -> plugin.teleportManager().sendTeleportMessage(player, "&aWarped to &f" + label + "&a."));
         return true;
     }
 

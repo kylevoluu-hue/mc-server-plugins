@@ -8,7 +8,13 @@ import com.lumen.essentials.combat.CombatListener2;
 import com.lumen.essentials.combat.CombatTagManager;
 import com.lumen.essentials.command.CommandManager;
 import com.lumen.essentials.command.FeatureCommandHandler;
+import com.lumen.essentials.command.EconomyCommandHandler;
 import com.lumen.essentials.config.ConfigManager;
+import com.lumen.essentials.economy.AfkZoneManager;
+import com.lumen.essentials.economy.CrateManager;
+import com.lumen.essentials.economy.EconomyManager;
+import com.lumen.essentials.economy.MerchantManager;
+import com.lumen.essentials.economy.PlaytimeRewardManager;
 import com.lumen.essentials.flags.FlagManager;
 import com.lumen.essentials.gui.MenuListener;
 import com.lumen.essentials.investigation.InvestigationManager;
@@ -58,6 +64,11 @@ public final class LumenEssentials extends JavaPlugin {
     private CombatTagManager combatTagManager;
     private TeleportManager teleportManager;
     private SettingsManager settingsManager;
+    private EconomyManager economyManager;
+    private CrateManager crateManager;
+    private MerchantManager merchantManager;
+    private AfkZoneManager afkZoneManager;
+    private PlaytimeRewardManager playtimeRewardManager;
     private CommandManager commandManager;
     private LumenAPI api;
 
@@ -106,6 +117,18 @@ public final class LumenEssentials extends JavaPlugin {
             settingsManager.load(online);
         }
 
+        // Economy: coins, keys, crates, merchant, AFK zones, playtime rewards.
+        this.economyManager = new EconomyManager(this);
+        economyManager.start();
+        this.crateManager = new CrateManager(this);
+        crateManager.reload();
+        this.merchantManager = new MerchantManager(this);
+        merchantManager.reload();
+        this.afkZoneManager = new AfkZoneManager(this);
+        afkZoneManager.start();
+        this.playtimeRewardManager = new PlaytimeRewardManager(this);
+        playtimeRewardManager.start();
+
         this.api = new LumenAPI(this);
 
         // 4. Listeners.
@@ -121,6 +144,7 @@ public final class LumenEssentials extends JavaPlugin {
             getLogger().severe("Command 'luac' missing from plugin.yml; commands disabled.");
         }
         registerFeatureCommands();
+        registerEconomyCommands();
 
         getLogger().info("Lumen Essentials enabled (" + checkManager.all().size()
                 + " checks, adapter " + versionManager.adapter().name() + ").");
@@ -128,6 +152,15 @@ public final class LumenEssentials extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (playtimeRewardManager != null) {
+            playtimeRewardManager.shutdown();
+        }
+        if (afkZoneManager != null) {
+            afkZoneManager.shutdown();
+        }
+        if (economyManager != null) {
+            economyManager.shutdown();
+        }
         if (settingsManager != null) {
             settingsManager.shutdown();
         }
@@ -161,11 +194,21 @@ public final class LumenEssentials extends JavaPlugin {
         FeatureCommandHandler handler = new FeatureCommandHandler(this);
         String[] commands = {"flag", "flaglist", "stats", "warp", "sswarp", "rtp",
                 "rtpworld", "rtpamount", "tpa", "tpahere", "tpaccept", "tpauto", "tp", "settings"};
-        for (String name : commands) {
+        bind(commands, handler, handler);
+    }
+
+    private void registerEconomyCommands() {
+        EconomyCommandHandler handler = new EconomyCommandHandler(this);
+        String[] commands = {"coins", "keys", "key", "crates", "crate", "merchant", "afkzone", "economy"};
+        bind(commands, handler, handler);
+    }
+
+    private void bind(String[] names, CommandExecutor executor, TabCompleter completer) {
+        for (String name : names) {
             PluginCommand command = getCommand(name);
             if (command != null) {
-                command.setExecutor((CommandExecutor) handler);
-                command.setTabCompleter((TabCompleter) handler);
+                command.setExecutor(executor);
+                command.setTabCompleter(completer);
             } else {
                 getLogger().warning("Command '" + name + "' missing from plugin.yml.");
             }
@@ -182,6 +225,15 @@ public final class LumenEssentials extends JavaPlugin {
         }
         if (warpManager != null) {
             warpManager.load();
+        }
+        if (crateManager != null) {
+            crateManager.reload();
+        }
+        if (merchantManager != null) {
+            merchantManager.reload();
+        }
+        if (afkZoneManager != null) {
+            afkZoneManager.load();
         }
     }
 
@@ -253,6 +305,26 @@ public final class LumenEssentials extends JavaPlugin {
 
     public SettingsManager settingsManager() {
         return settingsManager;
+    }
+
+    public EconomyManager economyManager() {
+        return economyManager;
+    }
+
+    public CrateManager crateManager() {
+        return crateManager;
+    }
+
+    public MerchantManager merchantManager() {
+        return merchantManager;
+    }
+
+    public AfkZoneManager afkZoneManager() {
+        return afkZoneManager;
+    }
+
+    public PlaytimeRewardManager playtimeRewardManager() {
+        return playtimeRewardManager;
     }
 
     /** The public developer API. */
