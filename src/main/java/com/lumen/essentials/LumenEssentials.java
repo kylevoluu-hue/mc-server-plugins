@@ -9,7 +9,10 @@ import com.lumen.essentials.combat.CombatTagManager;
 import com.lumen.essentials.command.CommandManager;
 import com.lumen.essentials.command.FeatureCommandHandler;
 import com.lumen.essentials.command.EconomyCommandHandler;
+import com.lumen.essentials.command.DuelCommandHandler;
 import com.lumen.essentials.config.ConfigManager;
+import com.lumen.essentials.duel.DuelListener;
+import com.lumen.essentials.duel.DuelManager;
 import com.lumen.essentials.economy.AfkZoneManager;
 import com.lumen.essentials.economy.CrateManager;
 import com.lumen.essentials.economy.EconomyManager;
@@ -69,6 +72,7 @@ public final class LumenEssentials extends JavaPlugin {
     private MerchantManager merchantManager;
     private AfkZoneManager afkZoneManager;
     private PlaytimeRewardManager playtimeRewardManager;
+    private DuelManager duelManager;
     private CommandManager commandManager;
     private LumenAPI api;
 
@@ -128,6 +132,8 @@ public final class LumenEssentials extends JavaPlugin {
         afkZoneManager.start();
         this.playtimeRewardManager = new PlaytimeRewardManager(this);
         playtimeRewardManager.start();
+        this.duelManager = new DuelManager(this);
+        duelManager.load();
 
         this.api = new LumenAPI(this);
 
@@ -145,6 +151,8 @@ public final class LumenEssentials extends JavaPlugin {
         }
         registerFeatureCommands();
         registerEconomyCommands();
+        DuelCommandHandler duelCommands = new DuelCommandHandler(this);
+        bind(new String[]{"duel", "duelaccept", "leave", "duelarena"}, duelCommands, duelCommands);
 
         getLogger().info("Lumen Essentials enabled (" + checkManager.all().size()
                 + " checks, adapter " + versionManager.adapter().name() + ").");
@@ -152,6 +160,9 @@ public final class LumenEssentials extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (duelManager != null) {
+            duelManager.shutdown();
+        }
         if (playtimeRewardManager != null) {
             playtimeRewardManager.shutdown();
         }
@@ -188,6 +199,7 @@ public final class LumenEssentials extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
         getServer().getPluginManager().registerEvents(new SilkSpawnerListener(this), this);
         getServer().getPluginManager().registerEvents(new SettingsListener(this), this);
+        getServer().getPluginManager().registerEvents(new DuelListener(this), this);
     }
 
     private void registerFeatureCommands() {
@@ -234,6 +246,9 @@ public final class LumenEssentials extends JavaPlugin {
         }
         if (afkZoneManager != null) {
             afkZoneManager.load();
+        }
+        if (duelManager != null) {
+            duelManager.load();
         }
     }
 
@@ -325,6 +340,10 @@ public final class LumenEssentials extends JavaPlugin {
 
     public PlaytimeRewardManager playtimeRewardManager() {
         return playtimeRewardManager;
+    }
+
+    public DuelManager duelManager() {
+        return duelManager;
     }
 
     /** The public developer API. */

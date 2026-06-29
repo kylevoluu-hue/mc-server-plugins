@@ -64,6 +64,9 @@ in a single plugin.
   - **Coins + Keys economy** — earn Keys by playtime, earn Coins in AFK zones, open
     rarity-tiered **crates** with weighted rewards, and spend Coins in the
     **`/merchant`** shop. Fully config-driven with many setup commands.
+  - **Dueling** (`/duel`) — kit menu (UHC, Sword, Crystal, Axe, SMP, Custom),
+    best-of rounds, arena weather/time, full inventory save/restore, `/leave` and
+    disconnect forfeits, and a **Duel Wins** stat.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -198,6 +201,10 @@ Standalone player-facing commands (separate from `/luac`):
 | `/merchant`                     | `lumen.economy`    | Open the Coin shop                           |
 | `/afkzone pos1\|pos2\|create\|remove\|setreward\|list` | `lumen.afkzone.admin` | Manage AFK zones |
 | `/economy reload`               | `lumen.economy.admin` | Reload the economy                        |
+| `/duel <player>` / `/duel savekit` | `lumen.duel`    | Open duel setup / save Custom kit            |
+| `/duelaccept`                   | `lumen.duel`       | Accept a pending duel                        |
+| `/leave`                        | `lumen.duel`       | Leave (forfeit) your current match           |
+| `/duelarena create\|pos1\|pos2\|remove\|list <name>` | `lumen.duel.admin` | Manage duel arenas         |
 
 Notes:
 
@@ -232,6 +239,33 @@ shown in the item). Settings persist per player in `settings.yml`.
 the server persists the flag and exposes it; a companion client/resource layer
 applies the visual effect): No Explosion Particles, Fast Crystal, Team Chat, Spoof
 Coords, Hurt Cam.
+
+### Dueling
+
+`/duel <player>` opens a **setup menu**: choose a **kit** (UHC, Sword, Crystal, Axe,
+SMP, or your **Custom** kit), the number of **rounds** (best of 1/3/5), the **weather**
+(clear/rain/thunder) and the **time** (day/night), then **Send Challenge**. The target
+runs `/duelaccept` and both are teleported to a free arena for a 3-2-1 countdown.
+
+- Each round, a lethal hit is intercepted (no real death, no item drops) and the
+  other player wins the round; first to the best-of majority wins the match.
+- **Inventories are saved before the match and fully restored after** — win, lose,
+  `/leave`, or disconnect. Leaving or disconnecting **forfeits** and awards the win to
+  the opponent.
+- Match wins increment a persistent **Duel Wins** counter, shown in `/stats`.
+- Save your **Custom kit** from the setup menu ("Save Custom Kit") or `/duel savekit`
+  — it stores your current inventory.
+
+**Arena setup (operator):**
+
+```
+/duelarena create arena1
+/duelarena pos1 arena1     # stand on spawn point 1
+/duelarena pos2 arena1     # stand on spawn point 2
+```
+
+Add as many arenas as you like; the plugin uses any free, fully-set arena. Without a
+ready arena, duels are declined with a message.
 
 ### Anti-combat-log
 
@@ -308,6 +342,8 @@ Admin commands: `/coins give|take|set <player> <amount>`, `/key give|take|set <p
 | `lumen.economy`    | true    | Use coins, keys, crates, merchant         |
 | `lumen.economy.admin`| op    | Manage coins/keys, reload economy         |
 | `lumen.afkzone.admin`| op    | Create/manage AFK zones                   |
+| `lumen.duel`       | true    | Use the dueling system                    |
+| `lumen.duel.admin` | op      | Create/manage duel arenas                 |
 
 ---
 
@@ -328,8 +364,8 @@ Hot-reloadable files are generated on first run:
 - **`features.yml`** — SMP features: combat tag, teleport warmup/cooldowns, RTP
   center/radius, silk-spawners, and warp settings.
 - **`economy.yml`** — keys, crates, merchant items, playtime rewards, AFK payouts.
-- **`warps.yml` / `flags.yml` / `settings.yml` / `economy-data.yml`** — runtime data
-  stores (written by the plugin).
+- **`warps.yml` / `flags.yml` / `settings.yml` / `economy-data.yml` /
+  `duels-data.yml`** — runtime data stores (written by the plugin).
 
 Run `/luac reload` to apply changes without a restart.
 

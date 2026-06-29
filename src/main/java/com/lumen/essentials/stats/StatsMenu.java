@@ -50,6 +50,11 @@ public final class StatsMenu extends Menu {
                 .name("&6Playtime")
                 .lore("&7Time played: &f" + playtime).build());
 
+        int duelWins = plugin.duelManager().getWins(target.getUniqueId());
+        getInventory().setItem(22, new ItemBuilder(material("DIAMOND_SWORD"))
+                .name("&6Duel Wins")
+                .lore("&7Duels won: &f" + duelWins).build());
+
         fillEmpty();
     }
 

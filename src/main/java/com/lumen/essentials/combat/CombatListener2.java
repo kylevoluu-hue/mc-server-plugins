@@ -30,6 +30,11 @@ public final class CombatListener2 implements Listener {
             return;
         }
         if (event.getEntity() instanceof Player && event.getDamager() instanceof Player) {
+            // Players in a duel are not combat-tagged (the duel manages its own state).
+            if (plugin.duelManager().isBusy(event.getEntity().getUniqueId())
+                    || plugin.duelManager().isBusy(event.getDamager().getUniqueId())) {
+                return;
+            }
             plugin.combatTagManager().tag((Player) event.getEntity());
             plugin.combatTagManager().tag((Player) event.getDamager());
         }

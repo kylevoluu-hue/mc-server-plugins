@@ -23,6 +23,7 @@ public final class ConfigManager {
     private final ConfigFile flags;
     private final ConfigFile settings;
     private final ConfigFile economyData;
+    private final ConfigFile duelsData;
 
     public ConfigManager(Plugin plugin) {
         this.config = new ConfigFile(plugin, "config.yml");
@@ -36,6 +37,7 @@ public final class ConfigManager {
         this.flags = new ConfigFile(plugin, "flags.yml", true);
         this.settings = new ConfigFile(plugin, "settings.yml", true);
         this.economyData = new ConfigFile(plugin, "economy-data.yml", true);
+        this.duelsData = new ConfigFile(plugin, "duels-data.yml", true);
     }
 
     public void loadAll() {
@@ -50,6 +52,7 @@ public final class ConfigManager {
         flags.load();
         settings.load();
         economyData.load();
+        duelsData.load();
     }
 
     public void reloadAll() {
@@ -64,6 +67,7 @@ public final class ConfigManager {
         flags.reload();
         settings.reload();
         economyData.reload();
+        duelsData.reload();
     }
 
     public FileConfiguration config() {
@@ -124,6 +128,14 @@ public final class ConfigManager {
 
     public void saveEconomyData() {
         economyData.save();
+    }
+
+    public FileConfiguration duelsData() {
+        return duelsData.get();
+    }
+
+    public void saveDuelsData() {
+        duelsData.save();
     }
 
     /** Convenience accessor for a message string with a fallback. */

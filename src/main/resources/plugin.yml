@@ -100,6 +100,22 @@ commands:
     description: Economy admin.
     usage: /economy reload
     permission: lumen.economy.admin
+  duel:
+    description: Challenge a player to a duel.
+    usage: /duel <player>
+    permission: lumen.duel
+  duelaccept:
+    description: Accept a pending duel.
+    usage: /duelaccept
+    permission: lumen.duel
+  leave:
+    description: Leave your current match.
+    usage: /leave
+    permission: lumen.duel
+  duelarena:
+    description: Manage duel arenas.
+    usage: /duelarena <create|pos1|pos2|remove|list> [name]
+    permission: lumen.duel.admin
 
 permissions:
   luac.admin:
@@ -167,4 +183,10 @@ permissions:
     default: op
   lumen.afkzone.admin:
     description: Create and manage AFK zones.
+    default: op
+  lumen.duel:
+    description: Use the dueling system.
+    default: true
+  lumen.duel.admin:
+    description: Create and manage duel arenas.
     default: op
