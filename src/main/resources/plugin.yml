@@ -109,13 +109,9 @@ commands:
     usage: /duelaccept
     permission: lumen.duel
   leave:
-    description: Leave your current match.
+    description: Leave your current match or queue.
     usage: /leave
     permission: lumen.duel
-  duelarena:
-    description: Manage duel arenas.
-    usage: /duelarena <create|pos1|pos2|remove|list> [name]
-    permission: lumen.duel.admin
 
 permissions:
   luac.admin:
@@ -187,6 +183,3 @@ permissions:
   lumen.duel:
     description: Use the dueling system.
     default: true
-  lumen.duel.admin:
-    description: Create and manage duel arenas.
-    default: op

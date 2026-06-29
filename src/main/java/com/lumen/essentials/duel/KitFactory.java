@@ -6,15 +6,20 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Locale;
+
 /**
- * Builds and applies the predefined duel kits (UHC, Sword, Crystal, Axe, SMP) and the
- * per-player Custom kit. Materials and enchantments are resolved defensively so a kit
- * still works (degraded) on older versions that lack a block/enchant.
+ * The duel kit registry and applier. Predefined kits are built in code (version-safe
+ * material/enchant resolution), plus {@code Wild} (keep your own inventory) and three
+ * per-player {@code Custom} slots. Server owners can rename/extend the list here.
  */
 public final class KitFactory {
 
-    /** The kit names shown in the menu, in order. */
-    public static final String[] KITS = {"UHC", "Sword", "Crystal", "Axe", "SMP", "Custom"};
+    /** Kit names shown in the kit menu, in order. */
+    public static final String[] KITS = {
+            "Vanilla", "SMP", "Sword", "Axe", "Crystal", "UHC", "Gapple",
+            "Diamond", "Netherite", "Wild", "Custom 1", "Custom 2", "Custom 3"
+    };
 
     private final LumenEssentials plugin;
 
@@ -22,46 +27,98 @@ public final class KitFactory {
         this.plugin = plugin;
     }
 
-    /** Clears the player's inventory and applies the named kit. */
+    /** Applies the named kit. {@code Wild} keeps the player's current inventory. */
     public void apply(Player player, String kitName) {
+        String id = kitName.toLowerCase(Locale.ROOT).replace(" ", "");
+        if (id.equals("wild")) {
+            return; // bring your own gear
+        }
         player.getInventory().clear();
         try {
             player.getInventory().setArmorContents(new ItemStack[4]);
         } catch (Throwable ignored) {
             // ignore
         }
-
-        switch (kitName.toLowerCase(java.util.Locale.ROOT)) {
-            case "uhc":
-                uhc(player);
-                break;
-            case "crystal":
-                crystal(player);
-                break;
-            case "axe":
-                axe(player);
-                break;
-            case "smp":
-                smp(player);
-                break;
-            case "custom":
-                plugin.duelManager().applyCustomKit(player);
-                break;
+        if (id.startsWith("custom")) {
+            int slot = parseSlot(id);
+            plugin.duelManager().applyCustomKit(player, slot);
+            DuelUtil.updateInventory(player);
+            return;
+        }
+        switch (id) {
+            case "vanilla": vanilla(player); break;
+            case "smp": smp(player); break;
+            case "axe": axe(player); break;
+            case "crystal": crystal(player); break;
+            case "uhc": uhc(player); break;
+            case "gapple": gapple(player); break;
+            case "netherite": netherite(player); break;
+            case "diamond": diamond(player); break;
             case "sword":
-            default:
-                sword(player);
-                break;
+            default: sword(player); break;
         }
         DuelUtil.updateInventory(player);
     }
 
+    /** A thematically-related menu icon material name for a kit. */
+    public static String iconFor(String kit) {
+        switch (kit.toLowerCase(Locale.ROOT).replace(" ", "")) {
+            case "vanilla": return "IRON_SWORD";
+            case "smp": return "NETHERITE_INGOT";
+            case "sword": return "DIAMOND_SWORD";
+            case "axe": return "DIAMOND_AXE";
+            case "crystal": return "END_CRYSTAL";
+            case "uhc": return "GOLDEN_APPLE";
+            case "gapple": return "ENCHANTED_GOLDEN_APPLE";
+            case "diamond": return "DIAMOND";
+            case "netherite": return "NETHERITE_INGOT";
+            case "wild": return "GRASS_BLOCK";
+            case "custom1":
+            case "custom2":
+            case "custom3": return "CHEST";
+            default: return "DIAMOND_SWORD";
+        }
+    }
+
+    private int parseSlot(String id) {
+        try {
+            return Math.max(1, Math.min(3, Integer.parseInt(id.substring("custom".length()))));
+        } catch (NumberFormatException ex) {
+            return 1;
+        }
+    }
+
     // --- Kits --------------------------------------------------------------
+
+    private void vanilla(Player player) {
+        give(player, 0, item("DIAMOND_SWORD", 1));
+        give(player, 1, item("BOW", 1));
+        give(player, 2, item("GOLDEN_APPLE", 8, "GOLDEN_APPLE"));
+        give(player, 3, item("COOKED_BEEF", 32, "COOKED_BEEF"));
+        give(player, 8, item("ARROW", 16, "ARROW"));
+        armor(player, "DIAMOND", 0);
+    }
 
     private void sword(Player player) {
         give(player, 0, sharp(item("DIAMOND_SWORD", 1), 2));
-        give(player, 1, item("GOLDEN_APPLE", 16, "ENCHANTED_GOLDEN_APPLE"));
+        give(player, 1, item("GOLDEN_APPLE", 16, "GOLDEN_APPLE"));
         give(player, 2, item("COOKED_BEEF", 32, "COOKED_BEEF"));
         armor(player, "DIAMOND", 2);
+    }
+
+    private void diamond(Player player) {
+        give(player, 0, sharp(item("DIAMOND_SWORD", 1), 3));
+        give(player, 1, item("ENCHANTED_GOLDEN_APPLE", 16, "GOLDEN_APPLE"));
+        give(player, 2, item("COOKED_BEEF", 64, "COOKED_BEEF"));
+        armor(player, "DIAMOND", 3);
+    }
+
+    private void netherite(Player player) {
+        give(player, 0, sharp(item("NETHERITE_SWORD", 1, "DIAMOND_SWORD"), 3));
+        give(player, 1, item("SHIELD", 1, "SHIELD"));
+        give(player, 2, item("ENCHANTED_GOLDEN_APPLE", 16, "GOLDEN_APPLE"));
+        give(player, 3, item("TOTEM_OF_UNDYING", 2, "TOTEM_OF_UNDYING"));
+        armor(player, "NETHERITE", 4, "DIAMOND");
     }
 
     private void uhc(Player player) {
@@ -72,8 +129,14 @@ public final class KitFactory {
         give(player, 4, item("COOKED_BEEF", 32, "COOKED_BEEF"));
         give(player, 5, item("COBBLESTONE", 64, "COBBLESTONE"));
         give(player, 6, item("WATER_BUCKET", 1, "WATER_BUCKET"));
-        give(player, 7, item("OAK_PLANKS", 64, "PLANKS"));
         armor(player, "IRON", 1);
+    }
+
+    private void gapple(Player player) {
+        give(player, 0, sharp(item("DIAMOND_SWORD", 1), 2));
+        give(player, 1, item("ENCHANTED_GOLDEN_APPLE", 64, "GOLDEN_APPLE"));
+        give(player, 2, item("GOLDEN_APPLE", 64, "GOLDEN_APPLE"));
+        armor(player, "DIAMOND", 2);
     }
 
     private void crystal(Player player) {
@@ -112,7 +175,6 @@ public final class KitFactory {
         }
     }
 
-    /** Resolves the first available material; never returns null (falls back to STONE). */
     private ItemStack item(String primary, int amount, String... fallbacks) {
         Material material = plugin.versionManager().adapter().resolveMaterial(primary);
         if (material == null) {
@@ -143,11 +205,11 @@ public final class KitFactory {
 
     private ItemStack enchant(ItemStack item, int level, String... enchantNames) {
         Enchantment ench = resolveEnchant(enchantNames);
-        if (ench != null) {
+        if (ench != null && level > 0) {
             try {
                 item.addUnsafeEnchantment(ench, level);
             } catch (Throwable ignored) {
-                // enchant failed; return the plain item
+                // ignore
             }
         }
         return item;
@@ -163,7 +225,6 @@ public final class KitFactory {
                 }
             }
         }
-        // setArmorContents order: [boots, leggings, chestplate, helmet]
         ItemStack[] set = new ItemStack[]{
                 protect(item(resolvedTier + "_BOOTS", 1, "IRON_BOOTS"), protectionLevel),
                 protect(item(resolvedTier + "_LEGGINGS", 1, "IRON_LEGGINGS"), protectionLevel),
@@ -189,7 +250,7 @@ public final class KitFactory {
                     return ench;
                 }
             } catch (Throwable ignored) {
-                // getByName unsupported; try next
+                // ignore
             }
         }
         return null;

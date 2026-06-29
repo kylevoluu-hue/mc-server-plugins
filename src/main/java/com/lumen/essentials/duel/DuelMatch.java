@@ -1,62 +1,96 @@
 package com.lumen.essentials.duel;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
-/** Mutable state of a single duel between two players. */
+/** Mutable state of a single (possibly team) duel. Team 0 = A, team 1 = B. */
 public final class DuelMatch {
 
     public enum State { COUNTDOWN, FIGHTING, ENDED }
 
-    private final DuelArena arena;
-    private final UUID player1;
-    private final UUID player2;
-    private final String name1;
-    private final String name2;
+    private final DuelMode mode;
     private final DuelSettings settings;
+    private final Integer arenaTile;
+    private final List<UUID> teamA;
+    private final List<UUID> teamB;
+    private final Map<UUID, String> names = new HashMap<>();
+    private final Map<UUID, PlayerState> saved = new HashMap<>();
+    private final Set<UUID> aliveA = new HashSet<>();
+    private final Set<UUID> aliveB = new HashSet<>();
 
-    private PlayerState saved1;
-    private PlayerState saved2;
-    private int score1;
-    private int score2;
+    private int scoreA;
+    private int scoreB;
     private int round = 1;
     private State state = State.COUNTDOWN;
 
-    public DuelMatch(DuelArena arena, UUID player1, String name1, UUID player2, String name2,
-                     DuelSettings settings) {
-        this.arena = arena;
-        this.player1 = player1;
-        this.name1 = name1;
-        this.player2 = player2;
-        this.name2 = name2;
+    public DuelMatch(DuelMode mode, DuelSettings settings, Integer arenaTile,
+                     List<UUID> teamA, List<UUID> teamB, Map<UUID, String> names) {
+        this.mode = mode;
         this.settings = settings;
+        this.arenaTile = arenaTile;
+        this.teamA = new ArrayList<>(teamA);
+        this.teamB = new ArrayList<>(teamB);
+        this.names.putAll(names);
     }
 
-    public DuelArena arena() {
-        return arena;
-    }
-
-    public UUID player1() {
-        return player1;
-    }
-
-    public UUID player2() {
-        return player2;
-    }
-
-    public String name(UUID uuid) {
-        return uuid.equals(player1) ? name1 : name2;
-    }
-
-    public UUID opponent(UUID uuid) {
-        return uuid.equals(player1) ? player2 : player1;
-    }
-
-    public boolean has(UUID uuid) {
-        return uuid.equals(player1) || uuid.equals(player2);
+    public DuelMode mode() {
+        return mode;
     }
 
     public DuelSettings settings() {
         return settings;
+    }
+
+    public Integer arenaTile() {
+        return arenaTile;
+    }
+
+    public List<UUID> teamA() {
+        return teamA;
+    }
+
+    public List<UUID> teamB() {
+        return teamB;
+    }
+
+    public List<UUID> allPlayers() {
+        List<UUID> all = new ArrayList<>(teamA);
+        all.addAll(teamB);
+        return all;
+    }
+
+    public boolean has(UUID uuid) {
+        return teamA.contains(uuid) || teamB.contains(uuid);
+    }
+
+    /** 0 for team A, 1 for team B, -1 if not in the match. */
+    public int teamOf(UUID uuid) {
+        if (teamA.contains(uuid)) {
+            return 0;
+        }
+        return teamB.contains(uuid) ? 1 : -1;
+    }
+
+    public List<UUID> team(int index) {
+        return index == 0 ? teamA : teamB;
+    }
+
+    public String name(UUID uuid) {
+        return names.getOrDefault(uuid, "?");
+    }
+
+    public String teamName(int index) {
+        List<UUID> team = team(index);
+        List<String> parts = new ArrayList<>();
+        for (UUID uuid : team) {
+            parts.add(name(uuid));
+        }
+        return String.join(", ", parts);
     }
 
     public State state() {
@@ -75,27 +109,46 @@ public final class DuelMatch {
         this.round++;
     }
 
-    public int score(UUID uuid) {
-        return uuid.equals(player1) ? score1 : score2;
+    public int score(int team) {
+        return team == 0 ? scoreA : scoreB;
     }
 
-    public void addScore(UUID uuid) {
-        if (uuid.equals(player1)) {
-            score1++;
+    public void addScore(int team) {
+        if (team == 0) {
+            scoreA++;
         } else {
-            score2++;
+            scoreB++;
         }
+    }
+
+    public void resetAlive() {
+        aliveA.clear();
+        aliveA.addAll(teamA);
+        aliveB.clear();
+        aliveB.addAll(teamB);
+    }
+
+    public Set<UUID> alive(int team) {
+        return team == 0 ? aliveA : aliveB;
+    }
+
+    public void eliminate(UUID uuid) {
+        aliveA.remove(uuid);
+        aliveB.remove(uuid);
+    }
+
+    /** Removes a player from the match entirely (forfeit/quit). */
+    public void removePlayer(UUID uuid) {
+        eliminate(uuid);
+        teamA.remove(uuid);
+        teamB.remove(uuid);
     }
 
     public void setSaved(UUID uuid, PlayerState state) {
-        if (uuid.equals(player1)) {
-            saved1 = state;
-        } else {
-            saved2 = state;
-        }
+        saved.put(uuid, state);
     }
 
     public PlayerState saved(UUID uuid) {
-        return uuid.equals(player1) ? saved1 : saved2;
+        return saved.get(uuid);
     }
 }

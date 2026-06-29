@@ -2,6 +2,7 @@ package com.lumen.essentials.duel;
 
 import com.lumen.essentials.LumenEssentials;
 import com.lumen.essentials.utilities.MessageUtil;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
@@ -12,30 +13,26 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Coordinates the whole dueling feature: requests, arenas, kits, the round/best-of
- * lifecycle, forfeits (via {@code /leave} or disconnect), inventory save/restore, and
- * the persistent duel-win counter. Player state is always restored when a match ends,
- * however it ends.
+ * Coordinates dueling: direct challenges, the matchmaking queue, team match lifecycle
+ * (countdown, rounds, elimination), forfeits, the auto-generated arena world, custom
+ * kit slots, and the persistent duel-win counter. Player state is always restored when
+ * a match ends, however it ends.
  */
 public final class DuelManager {
 
     private static final class Request {
         final UUID challenger;
-        final String challengerName;
         final DuelSettings settings;
         final long expiresAt;
 
-        Request(UUID challenger, String challengerName, DuelSettings settings, long expiresAt) {
+        Request(UUID challenger, DuelSettings settings, long expiresAt) {
             this.challenger = challenger;
-            this.challengerName = challengerName;
             this.settings = settings;
             this.expiresAt = expiresAt;
         }
@@ -43,32 +40,30 @@ public final class DuelManager {
 
     private final LumenEssentials plugin;
     private final KitFactory kitFactory;
+    private final ArenaManager arenaManager;
+    private final QueueManager queueManager;
     private final Map<UUID, DuelMatch> byPlayer = new ConcurrentHashMap<>();
-    private final Map<String, DuelArena> arenas = new LinkedHashMap<>();
     private final Map<UUID, Request> requests = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> wins = new ConcurrentHashMap<>();
 
     public DuelManager(LumenEssentials plugin) {
         this.plugin = plugin;
         this.kitFactory = new KitFactory(plugin);
+        this.arenaManager = new ArenaManager(plugin);
+        this.queueManager = new QueueManager(plugin, this);
+    }
+
+    public ArenaManager arenaManager() {
+        return arenaManager;
+    }
+
+    public QueueManager queueManager() {
+        return queueManager;
     }
 
     public void load() {
-        arenas.clear();
         wins.clear();
         FileConfiguration data = plugin.configManager().duelsData();
-        ConfigurationSection arenaSec = data.getConfigurationSection("arenas");
-        if (arenaSec != null) {
-            for (String name : arenaSec.getKeys(false)) {
-                ConfigurationSection s = arenaSec.getConfigurationSection(name);
-                if (s == null) {
-                    continue;
-                }
-                arenas.put(name.toLowerCase(Locale.ROOT), new DuelArena(name.toLowerCase(Locale.ROOT),
-                        readLoc(s.getConfigurationSection("spawn1")),
-                        readLoc(s.getConfigurationSection("spawn2"))));
-            }
-        }
         ConfigurationSection winSec = data.getConfigurationSection("wins");
         if (winSec != null) {
             for (String key : winSec.getKeys(false)) {
@@ -83,18 +78,11 @@ public final class DuelManager {
 
     private void saveData() {
         FileConfiguration data = plugin.configManager().duelsData();
-        data.set("arenas", null);
-        for (DuelArena arena : arenas.values()) {
-            writeLoc(data, "arenas." + arena.name() + ".spawn1", arena.spawn1());
-            writeLoc(data, "arenas." + arena.name() + ".spawn2", arena.spawn2());
-        }
         for (Map.Entry<UUID, Integer> entry : wins.entrySet()) {
             data.set("wins." + entry.getKey(), entry.getValue());
         }
         plugin.configManager().saveDuelsData();
     }
-
-    // --- Duel wins (used by /stats) ---------------------------------------
 
     public int getWins(UUID uuid) {
         return wins.getOrDefault(uuid, 0);
@@ -104,11 +92,11 @@ public final class DuelManager {
         wins.merge(uuid, 1, Integer::sum);
     }
 
-    // --- Requests ----------------------------------------------------------
-
     public boolean isBusy(UUID uuid) {
-        return byPlayer.containsKey(uuid);
+        return byPlayer.containsKey(uuid) || queueManager.isQueued(uuid);
     }
+
+    // --- Direct challenges (1v1) -------------------------------------------
 
     public void sendRequest(Player challenger, Player target, DuelSettings settings) {
         if (challenger.equals(target)) {
@@ -116,15 +104,11 @@ public final class DuelManager {
             return;
         }
         if (isBusy(challenger.getUniqueId()) || isBusy(target.getUniqueId())) {
-            MessageUtil.send(challenger, "&cOne of you is already in a duel.");
+            MessageUtil.send(challenger, "&cOne of you is already in a duel or queue.");
             return;
         }
-        if (freeArena() == null) {
-            MessageUtil.send(challenger, "&cNo duel arena is available. Ask an operator to set one up.");
-            return;
-        }
-        requests.put(target.getUniqueId(), new Request(challenger.getUniqueId(),
-                challenger.getName(), settings, System.currentTimeMillis() + 60_000L));
+        requests.put(target.getUniqueId(), new Request(challenger.getUniqueId(), settings,
+                System.currentTimeMillis() + 60_000L));
         MessageUtil.send(challenger, "&aDuel request sent to &f" + target.getName()
                 + " &7(" + settings.kit() + ", best of " + settings.rounds() + ")");
         MessageUtil.send(target, "&e" + challenger.getName() + " &7challenged you to a duel &8("
@@ -143,117 +127,116 @@ public final class DuelManager {
             return;
         }
         if (isBusy(challenger.getUniqueId()) || isBusy(target.getUniqueId())) {
-            MessageUtil.send(target, "&cOne of you is already in a duel.");
+            MessageUtil.send(target, "&cOne of you is already busy.");
             return;
         }
-        DuelArena arena = freeArena();
-        if (arena == null) {
-            MessageUtil.send(target, "&cNo duel arena is available right now.");
-            return;
-        }
-        startMatch(challenger, target, request.settings, arena);
+        startMatch(DuelMode.ONE_V_ONE, request.settings,
+                java.util.Collections.singletonList(challenger.getUniqueId()),
+                java.util.Collections.singletonList(target.getUniqueId()));
     }
 
     // --- Match lifecycle ---------------------------------------------------
 
-    private void startMatch(Player p1, Player p2, DuelSettings settings, DuelArena arena) {
-        arena.setInUse(true);
-        DuelMatch match = new DuelMatch(arena, p1.getUniqueId(), p1.getName(),
-                p2.getUniqueId(), p2.getName(), settings);
-        match.setSaved(p1.getUniqueId(), PlayerState.capture(p1));
-        match.setSaved(p2.getUniqueId(), PlayerState.capture(p2));
-        byPlayer.put(p1.getUniqueId(), match);
-        byPlayer.put(p2.getUniqueId(), match);
+    /** Starts a match between two pre-formed teams. Used by both queue and challenge. */
+    public void startMatch(DuelMode mode, DuelSettings settings, List<UUID> teamA, List<UUID> teamB) {
+        Integer tile = arenaManager.allocate();
+        if (tile == null) {
+            messageAll(teamA, teamB, "&cNo duel arena is available right now, try again.");
+            return;
+        }
+        Map<UUID, String> names = new HashMap<>();
+        for (UUID uuid : concat(teamA, teamB)) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            names.put(uuid, p == null ? "?" : p.getName());
+        }
+        DuelMatch match = new DuelMatch(mode, settings, tile, teamA, teamB, names);
+        for (UUID uuid : match.allPlayers()) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            if (p != null) {
+                match.setSaved(uuid, PlayerState.capture(p));
+            }
+            byPlayer.put(uuid, match);
+        }
         applyEnvironment(match);
         beginRound(match);
     }
 
     private void applyEnvironment(DuelMatch match) {
-        Location anchor = match.arena().spawn1();
-        if (anchor == null || anchor.getWorld() == null) {
+        World world = arenaManager.world();
+        if (world == null) {
             return;
         }
-        World world = anchor.getWorld();
         try {
             switch (match.settings().weather()) {
-                case RAIN:
-                    world.setStorm(true);
-                    world.setThundering(false);
-                    break;
-                case THUNDER:
-                    world.setStorm(true);
-                    world.setThundering(true);
-                    break;
+                case RAIN: world.setStorm(true); world.setThundering(false); break;
+                case THUNDER: world.setStorm(true); world.setThundering(true); break;
                 case CLEAR:
-                default:
-                    world.setStorm(false);
-                    world.setThundering(false);
-                    break;
+                default: world.setStorm(false); world.setThundering(false); break;
             }
             world.setTime(match.settings().time() == DuelSettings.Time.NIGHT ? 18000L : 1000L);
         } catch (Throwable ignored) {
-            // weather/time control unsupported; ignore
+            // ignore
         }
     }
 
     private void beginRound(DuelMatch match) {
-        Player p1 = plugin.getServer().getPlayer(match.player1());
-        Player p2 = plugin.getServer().getPlayer(match.player2());
-        if (p1 == null || p2 == null) {
-            forfeit(p1 == null ? match.player1() : match.player2());
+        if (match.teamA().isEmpty() || match.teamB().isEmpty()) {
+            endMatch(match, match.teamA().isEmpty() ? 1 : 0);
             return;
         }
+        match.resetAlive();
         match.setState(DuelMatch.State.COUNTDOWN);
-        prepare(p1, match.arena().spawn1(), match.settings().kit());
-        prepare(p2, match.arena().spawn2(), match.settings().kit());
 
-        String header = "&bRound " + match.round();
-        DuelUtil.title(p1, header, "&7Get ready...");
-        DuelUtil.title(p2, header, "&7Get ready...");
+        List<Location>[] spawns = arenaManager.spawns(match.arenaTile(), match.mode().teamSize());
+        teleportTeam(match, 0, spawns[0]);
+        teleportTeam(match, 1, spawns[1]);
 
-        // 3..2..1..GO countdown.
+        forEachOnline(match, p -> DuelUtil.title(p, "&bRound " + match.round(), "&7Get ready..."));
+
         schedule(() -> countdown(match, 3), 20L);
         schedule(() -> countdown(match, 2), 40L);
         schedule(() -> countdown(match, 1), 60L);
         schedule(() -> {
-            if (byPlayer.containsKey(match.player1())) {
+            if (active(match)) {
                 match.setState(DuelMatch.State.FIGHTING);
-                Player a = plugin.getServer().getPlayer(match.player1());
-                Player b = plugin.getServer().getPlayer(match.player2());
-                if (a != null) {
-                    DuelUtil.title(a, "&aGO!", "");
-                }
-                if (b != null) {
-                    DuelUtil.title(b, "&aGO!", "");
-                }
+                forEachOnline(match, p -> DuelUtil.title(p, "&aGO!", ""));
             }
         }, 80L);
     }
 
-    private void countdown(DuelMatch match, int n) {
-        if (!byPlayer.containsKey(match.player1())) {
-            return;
-        }
-        Player a = plugin.getServer().getPlayer(match.player1());
-        Player b = plugin.getServer().getPlayer(match.player2());
-        if (a != null) {
-            DuelUtil.title(a, "&e" + n, "");
-        }
-        if (b != null) {
-            DuelUtil.title(b, "&e" + n, "");
+    private void teleportTeam(DuelMatch match, int team, List<Location> spawns) {
+        List<UUID> members = match.team(team);
+        for (int i = 0; i < members.size(); i++) {
+            Player p = plugin.getServer().getPlayer(members.get(i));
+            if (p == null) {
+                continue;
+            }
+            Location spawn = spawns.get(Math.min(i, spawns.size() - 1));
+            prepare(p, spawn, match.settings().kit());
         }
     }
 
     private void prepare(Player player, Location spawn, String kit) {
         DuelUtil.clearEffects(player);
         DuelUtil.heal(player);
+        try {
+            player.setGameMode(GameMode.SURVIVAL);
+        } catch (Throwable ignored) {
+            // ignore
+        }
         if (spawn != null) {
             player.teleport(spawn);
         }
         kitFactory.apply(player, kit);
     }
 
-    /** Handles a potentially-lethal hit during a duel: no real death/drops occur. */
+    private void countdown(DuelMatch match, int n) {
+        if (active(match)) {
+            forEachOnline(match, p -> DuelUtil.title(p, "&e" + n, ""));
+        }
+    }
+
+    /** A potentially-lethal hit during a duel: no real death/drops; eliminates instead. */
     public void handleDamage(EntityDamageEvent event) {
         if (!(event.getEntity() instanceof Player)) {
             return;
@@ -263,47 +246,65 @@ public final class DuelManager {
         if (match == null) {
             return;
         }
+        int team = match.teamOf(victim.getUniqueId());
         if (match.state() == DuelMatch.State.COUNTDOWN) {
-            event.setCancelled(true); // invulnerable during the countdown
+            event.setCancelled(true);
             return;
         }
         if (match.state() != DuelMatch.State.FIGHTING) {
             return;
         }
-        double remaining = victim.getHealth() - event.getFinalDamage();
-        if (remaining <= 0) {
+        if (!match.alive(team).contains(victim.getUniqueId())) {
+            event.setCancelled(true); // already eliminated (spectating)
+            return;
+        }
+        if (victim.getHealth() - event.getFinalDamage() <= 0) {
             event.setCancelled(true);
-            DuelUtil.heal(victim);
-            endRound(match, match.opponent(victim.getUniqueId()));
+            eliminate(match, victim, team);
         }
     }
 
-    private void endRound(DuelMatch match, UUID roundWinner) {
-        match.addScore(roundWinner);
-        broadcast(match, "&7Round &f" + match.round() + " &7won by &f" + match.name(roundWinner)
-                + " &8(" + match.score(match.player1()) + " - " + match.score(match.player2()) + ")");
+    private void eliminate(DuelMatch match, Player victim, int team) {
+        DuelUtil.heal(victim);
+        match.eliminate(victim.getUniqueId());
+        try {
+            victim.setGameMode(GameMode.SPECTATOR);
+            victim.teleport(arenaManager.center(match.arenaTile()));
+        } catch (Throwable ignored) {
+            // ignore
+        }
+        if (match.alive(team).isEmpty()) {
+            endRound(match, 1 - team);
+        }
+    }
 
-        if (match.score(roundWinner) >= match.settings().winsNeeded()) {
-            endMatch(match, roundWinner, "&6" + match.name(roundWinner) + " &awon the duel!");
+    private void endRound(DuelMatch match, int winnerTeam) {
+        match.addScore(winnerTeam);
+        broadcast(match, "&7Round &f" + match.round() + " &7to &f" + match.teamName(winnerTeam)
+                + " &8(" + match.score(0) + " - " + match.score(1) + ")");
+        if (match.score(winnerTeam) >= match.settings().winsNeeded()) {
+            endMatch(match, winnerTeam);
             return;
         }
         match.nextRound();
         schedule(() -> {
-            if (byPlayer.containsKey(match.player1())) {
+            if (active(match)) {
                 beginRound(match);
             }
         }, 60L);
     }
 
-    private void endMatch(DuelMatch match, UUID winner, String announcement) {
+    private void endMatch(DuelMatch match, int winnerTeam) {
         match.setState(DuelMatch.State.ENDED);
-        restore(match, match.player1());
-        restore(match, match.player2());
-        addWin(winner);
-        byPlayer.remove(match.player1());
-        byPlayer.remove(match.player2());
-        match.arena().setInUse(false);
-        broadcast(match, announcement);
+        for (UUID uuid : match.allPlayers()) {
+            restore(match, uuid);
+            byPlayer.remove(uuid);
+        }
+        for (UUID winner : match.team(winnerTeam)) {
+            addWin(winner);
+        }
+        arenaManager.release(match.arenaTile());
+        broadcast(match, "&6" + match.teamName(winnerTeam) + " &awon the duel!");
         saveData();
     }
 
@@ -315,47 +316,76 @@ public final class DuelManager {
         }
     }
 
-    /** Forfeit: the other player wins the whole match. Used by /leave and on quit. */
+    /** Forfeit (via /leave or disconnect): removes the player; their team may lose. */
     public boolean forfeit(UUID uuid) {
+        if (queueManager.leave(uuid)) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            if (p != null) {
+                MessageUtil.send(p, "&cYou left the duel queue.");
+            }
+            return true;
+        }
         DuelMatch match = byPlayer.get(uuid);
         if (match == null) {
             return false;
         }
-        UUID winner = match.opponent(uuid);
+        int team = match.teamOf(uuid);
+        restore(match, uuid);
+        byPlayer.remove(uuid);
+        match.removePlayer(uuid);
         Player loser = plugin.getServer().getPlayer(uuid);
         if (loser != null) {
             MessageUtil.send(loser, "&cYou left the duel.");
         }
-        endMatch(match, winner, "&6" + match.name(winner) + " &awon the duel &7(opponent left)");
+        if (match.team(team).isEmpty()) {
+            endMatch(match, 1 - team);
+        } else if (match.state() == DuelMatch.State.FIGHTING && match.alive(team).isEmpty()) {
+            endRound(match, 1 - team);
+        }
         return true;
     }
 
     public void handleQuit(UUID uuid) {
         requests.remove(uuid);
-        if (byPlayer.containsKey(uuid)) {
-            forfeit(uuid);
-        }
+        forfeit(uuid);
     }
 
-    // --- Custom kit --------------------------------------------------------
+    public void shutdown() {
+        for (DuelMatch match : new ArrayList<>(byPlayer.values())) {
+            if (active(match)) {
+                endMatch(match, 0);
+            }
+        }
+        saveData();
+    }
 
-    public void saveCustomKit(Player player) {
+    // --- Custom kit slots (3 per player) -----------------------------------
+
+    public void saveCustomKit(Player player, int slot) {
+        slot = Math.max(1, Math.min(3, slot));
         FileConfiguration data = plugin.configManager().duelsData();
-        data.set("customkits." + player.getUniqueId() + ".contents",
+        String base = "customkits." + player.getUniqueId() + ".slot" + slot;
+        data.set(base + ".contents",
                 new ArrayList<>(java.util.Arrays.asList(player.getInventory().getContents())));
-        data.set("customkits." + player.getUniqueId() + ".armor",
+        data.set(base + ".armor",
                 new ArrayList<>(java.util.Arrays.asList(player.getInventory().getArmorContents())));
         plugin.configManager().saveDuelsData();
-        MessageUtil.send(player, "&aSaved your current inventory as your Custom duel kit.");
+        MessageUtil.send(player, "&aSaved your inventory as Custom kit slot &f" + slot + "&a.");
     }
 
-    public void applyCustomKit(Player player) {
+    public boolean hasCustomKit(UUID uuid, int slot) {
+        return plugin.configManager().duelsData()
+                .getList("customkits." + uuid + ".slot" + slot + ".contents") != null;
+    }
+
+    public void applyCustomKit(Player player, int slot) {
         FileConfiguration data = plugin.configManager().duelsData();
-        List<?> contents = data.getList("customkits." + player.getUniqueId() + ".contents");
-        List<?> armor = data.getList("customkits." + player.getUniqueId() + ".armor");
+        String base = "customkits." + player.getUniqueId() + ".slot" + slot;
+        List<?> contents = data.getList(base + ".contents");
+        List<?> armor = data.getList(base + ".armor");
         if (contents == null) {
-            MessageUtil.send(player, "&eNo custom kit set - using Sword. Save one with &f/duel savekit&e.");
-            new KitFactory(plugin).apply(player, "sword");
+            MessageUtil.send(player, "&eCustom slot " + slot + " is empty - using Sword. Save one with &f/duel savekit " + slot + "&e.");
+            kitFactory.apply(player, "Sword");
             return;
         }
         try {
@@ -377,101 +407,46 @@ public final class DuelManager {
         return array;
     }
 
-    // --- Arenas (admin) ----------------------------------------------------
-
-    public boolean createArena(String name) {
-        String key = name.toLowerCase(Locale.ROOT);
-        if (arenas.containsKey(key)) {
-            return false;
-        }
-        arenas.put(key, new DuelArena(key, null, null));
-        saveData();
-        return true;
-    }
-
-    public boolean setSpawn(String name, int which, Location location) {
-        DuelArena arena = arenas.get(name.toLowerCase(Locale.ROOT));
-        if (arena == null) {
-            return false;
-        }
-        if (which == 1) {
-            arena.setSpawn1(location);
-        } else {
-            arena.setSpawn2(location);
-        }
-        saveData();
-        return true;
-    }
-
-    public boolean removeArena(String name) {
-        boolean removed = arenas.remove(name.toLowerCase(Locale.ROOT)) != null;
-        if (removed) {
-            saveData();
-        }
-        return removed;
-    }
-
-    public List<String> arenaNames() {
-        return new ArrayList<>(arenas.keySet());
-    }
-
-    private DuelArena freeArena() {
-        for (DuelArena arena : arenas.values()) {
-            if (arena.isReady() && !arena.isInUse()) {
-                return arena;
-            }
-        }
-        return null;
-    }
-
-    public void shutdown() {
-        // End any active matches cleanly, restoring inventories.
-        for (DuelMatch match : new ArrayList<>(byPlayer.values())) {
-            if (byPlayer.containsKey(match.player1())) {
-                endMatch(match, match.player1(), "&cDuel ended (server reload).");
-            }
-        }
-        saveData();
-    }
-
     // --- Helpers -----------------------------------------------------------
 
+    private boolean active(DuelMatch match) {
+        for (UUID uuid : match.allPlayers()) {
+            if (byPlayer.containsKey(uuid)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void broadcast(DuelMatch match, String message) {
-        Player p1 = plugin.getServer().getPlayer(match.player1());
-        Player p2 = plugin.getServer().getPlayer(match.player2());
-        if (p1 != null) {
-            MessageUtil.send(p1, message);
+        forEachOnline(match, p -> MessageUtil.send(p, message));
+    }
+
+    private void forEachOnline(DuelMatch match, java.util.function.Consumer<Player> action) {
+        for (UUID uuid : match.allPlayers()) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            if (p != null) {
+                action.accept(p);
+            }
         }
-        if (p2 != null) {
-            MessageUtil.send(p2, message);
+    }
+
+    private void messageAll(List<UUID> a, List<UUID> b, String message) {
+        for (UUID uuid : concat(a, b)) {
+            Player p = plugin.getServer().getPlayer(uuid);
+            if (p != null) {
+                MessageUtil.send(p, message);
+            }
         }
+    }
+
+    private List<UUID> concat(List<UUID> a, List<UUID> b) {
+        List<UUID> all = new ArrayList<>(a);
+        all.addAll(b);
+        return all;
     }
 
     private void schedule(Runnable runnable, long delayTicks) {
         plugin.getServer().getScheduler().runTaskLater(plugin, runnable, delayTicks);
-    }
-
-    private Location readLoc(ConfigurationSection s) {
-        if (s == null) {
-            return null;
-        }
-        World world = plugin.getServer().getWorld(s.getString("world", "world"));
-        if (world == null) {
-            return null;
-        }
-        return new Location(world, s.getDouble("x"), s.getDouble("y"), s.getDouble("z"),
-                (float) s.getDouble("yaw"), (float) s.getDouble("pitch"));
-    }
-
-    private void writeLoc(FileConfiguration data, String path, Location loc) {
-        if (loc == null || loc.getWorld() == null) {
-            return;
-        }
-        data.set(path + ".world", loc.getWorld().getName());
-        data.set(path + ".x", loc.getX());
-        data.set(path + ".y", loc.getY());
-        data.set(path + ".z", loc.getZ());
-        data.set(path + ".yaw", loc.getYaw());
-        data.set(path + ".pitch", loc.getPitch());
     }
 }

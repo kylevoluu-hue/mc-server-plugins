@@ -64,8 +64,10 @@ in a single plugin.
   - **Coins + Keys economy** — earn Keys by playtime, earn Coins in AFK zones, open
     rarity-tiered **crates** with weighted rewards, and spend Coins in the
     **`/merchant`** shop. Fully config-driven with many setup commands.
-  - **Dueling** (`/duel`) — kit menu (UHC, Sword, Crystal, Axe, SMP, Custom),
-    best-of rounds, arena weather/time, full inventory save/restore, `/leave` and
+  - **Dueling** (`/duel`) — PvP-Club-style: 1v1/2v2/4v4/8v8 modes, a kit menu
+    (Vanilla, SMP, Sword, Axe, Crystal, UHC, Gapple, Diamond, Netherite, Wild, and 3
+    Custom slots), a matchmaking **queue** with "Match Found", auto-generated 100×100
+    arenas, best-of rounds, weather/time, full inventory save/restore, `/leave` and
     disconnect forfeits, and a **Duel Wins** stat.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
@@ -201,10 +203,11 @@ Standalone player-facing commands (separate from `/luac`):
 | `/merchant`                     | `lumen.economy`    | Open the Coin shop                           |
 | `/afkzone pos1\|pos2\|create\|remove\|setreward\|list` | `lumen.afkzone.admin` | Manage AFK zones |
 | `/economy reload`               | `lumen.economy.admin` | Reload the economy                        |
-| `/duel <player>` / `/duel savekit` | `lumen.duel`    | Open duel setup / save Custom kit            |
-| `/duelaccept`                   | `lumen.duel`       | Accept a pending duel                        |
-| `/leave`                        | `lumen.duel`       | Leave (forfeit) your current match           |
-| `/duelarena create\|pos1\|pos2\|remove\|list <name>` | `lumen.duel.admin` | Manage duel arenas         |
+| `/duel`                         | `lumen.duel`       | Open the duel/queue menu (modes → kits)      |
+| `/duel <player>`                | `lumen.duel`       | Direct 1v1 challenge (setup menu)            |
+| `/duel savekit [1-3]`           | `lumen.duel`       | Save your inventory to a Custom kit slot     |
+| `/duelaccept`                   | `lumen.duel`       | Accept a pending challenge                   |
+| `/leave`                        | `lumen.duel`       | Leave your match or queue (forfeit)          |
 
 Notes:
 
@@ -240,32 +243,38 @@ the server persists the flag and exposes it; a companion client/resource layer
 applies the visual effect): No Explosion Particles, Fast Crystal, Team Chat, Spoof
 Coords, Hurt Cam.
 
-### Dueling
+### Dueling (PvP-Club style)
 
-`/duel <player>` opens a **setup menu**: choose a **kit** (UHC, Sword, Crystal, Axe,
-SMP, or your **Custom** kit), the number of **rounds** (best of 1/3/5), the **weather**
-(clear/rain/thunder) and the **time** (day/night), then **Send Challenge**. The target
-runs `/duelaccept` and both are teleported to a free arena for a 3-2-1 countdown.
+**No setup required** — arenas are generated automatically.
 
-- Each round, a lethal hit is intercepted (no real death, no item drops) and the
-  other player wins the round; first to the best-of majority wins the match.
+**Queue matchmaking:** `/duel` opens a menu of modes — **1v1, 2v2, 4v4, 8v8**.
+Picking a mode opens the **kit picker** (Vanilla, SMP, Sword, Axe, Crystal, UHC,
+Gapple, Diamond, Netherite, **Wild**, and **Custom 1/2/3**). Clicking a kit queues you;
+when the queue fills, everyone sees **"Match Found"** and is sent to an arena.
+
+**Direct challenge:** `/duel <player>` opens a setup menu (kit, best-of rounds,
+weather, time) and sends a 1v1 challenge; the target runs `/duelaccept`.
+
+**Arenas:** the plugin auto-creates a dedicated flat world (`lumen_duels`) and builds a
+fresh **100×100 walled arena** per match on a free tile, releasing it when the match
+ends — no per-match world creation, no lag, no operator setup. Weather and time are
+applied per match.
+
+**Kits:**
+
+- **Wild** — keep your own in-game gear (bring-your-own-kit duel).
+- **Custom 1/2/3** — three save slots per player. Save your current inventory via the
+  Custom Kits menu (in `/duel`) or `/duel savekit <1-3>`, then pick that slot as a kit.
+
+**Rounds & forfeits:**
+
+- A lethal hit is intercepted (no real death, no item drops); the player is
+  eliminated for the round (spectator until it ends). When a whole team is out, the
+  other team takes the round; first to the best-of majority wins the match.
 - **Inventories are saved before the match and fully restored after** — win, lose,
-  `/leave`, or disconnect. Leaving or disconnecting **forfeits** and awards the win to
-  the opponent.
+  `/leave`, or disconnect. Leaving/disconnecting **forfeits**; if it empties a team,
+  the other team wins.
 - Match wins increment a persistent **Duel Wins** counter, shown in `/stats`.
-- Save your **Custom kit** from the setup menu ("Save Custom Kit") or `/duel savekit`
-  — it stores your current inventory.
-
-**Arena setup (operator):**
-
-```
-/duelarena create arena1
-/duelarena pos1 arena1     # stand on spawn point 1
-/duelarena pos2 arena1     # stand on spawn point 2
-```
-
-Add as many arenas as you like; the plugin uses any free, fully-set arena. Without a
-ready arena, duels are declined with a message.
 
 ### Anti-combat-log
 
@@ -343,7 +352,6 @@ Admin commands: `/coins give|take|set <player> <amount>`, `/key give|take|set <p
 | `lumen.economy.admin`| op    | Manage coins/keys, reload economy         |
 | `lumen.afkzone.admin`| op    | Create/manage AFK zones                   |
 | `lumen.duel`       | true    | Use the dueling system                    |
-| `lumen.duel.admin` | op      | Create/manage duel arenas                 |
 
 ---
 
