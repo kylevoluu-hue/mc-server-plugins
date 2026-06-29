@@ -64,6 +64,10 @@ commands:
     description: Teleport (staff).
     usage: /tp <player> | <p1> <p2> | <x y z>
     permission: lumen.tp
+  settings:
+    description: Open your personal settings menu.
+    usage: /settings
+    permission: lumen.settings
 
 permissions:
   luac.admin:
@@ -119,4 +123,7 @@ permissions:
     default: op
   lumen.silkspawner:
     description: Harvest mob spawners with Silk Touch.
+    default: true
+  lumen.settings:
+    description: Open the personal settings menu.
     default: true

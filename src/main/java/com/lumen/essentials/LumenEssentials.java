@@ -20,6 +20,8 @@ import com.lumen.essentials.listener.WorldListener;
 import com.lumen.essentials.player.PlayerDataManager;
 import com.lumen.essentials.punishments.PunishmentManager;
 import com.lumen.essentials.rtp.RtpManager;
+import com.lumen.essentials.settings.SettingsListener;
+import com.lumen.essentials.settings.SettingsManager;
 import com.lumen.essentials.stats.StatsManager;
 import com.lumen.essentials.storage.StorageManager;
 import com.lumen.essentials.teleport.TeleportManager;
@@ -55,6 +57,7 @@ public final class LumenEssentials extends JavaPlugin {
     private RtpManager rtpManager;
     private CombatTagManager combatTagManager;
     private TeleportManager teleportManager;
+    private SettingsManager settingsManager;
     private CommandManager commandManager;
     private LumenAPI api;
 
@@ -96,6 +99,12 @@ public final class LumenEssentials extends JavaPlugin {
         this.combatTagManager = new CombatTagManager(this);
         combatTagManager.start();
         this.teleportManager = new TeleportManager(this);
+        this.settingsManager = new SettingsManager(this);
+        settingsManager.start();
+        // Load settings for anyone already online (e.g. on /reload).
+        for (org.bukkit.entity.Player online : getServer().getOnlinePlayers()) {
+            settingsManager.load(online);
+        }
 
         this.api = new LumenAPI(this);
 
@@ -119,6 +128,9 @@ public final class LumenEssentials extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (settingsManager != null) {
+            settingsManager.shutdown();
+        }
         if (combatTagManager != null) {
             combatTagManager.shutdown();
         }
@@ -142,12 +154,13 @@ public final class LumenEssentials extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new CombatListener2(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
         getServer().getPluginManager().registerEvents(new SilkSpawnerListener(this), this);
+        getServer().getPluginManager().registerEvents(new SettingsListener(this), this);
     }
 
     private void registerFeatureCommands() {
         FeatureCommandHandler handler = new FeatureCommandHandler(this);
         String[] commands = {"flag", "flaglist", "stats", "warp", "sswarp", "rtp",
-                "rtpworld", "rtpamount", "tpa", "tpahere", "tpaccept", "tpauto", "tp"};
+                "rtpworld", "rtpamount", "tpa", "tpahere", "tpaccept", "tpauto", "tp", "settings"};
         for (String name : commands) {
             PluginCommand command = getCommand(name);
             if (command != null) {
@@ -236,6 +249,10 @@ public final class LumenEssentials extends JavaPlugin {
 
     public TeleportManager teleportManager() {
         return teleportManager;
+    }
+
+    public SettingsManager settingsManager() {
+        return settingsManager;
     }
 
     /** The public developer API. */

@@ -65,6 +65,8 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
                 return tpAuto(sender);
             case "tp":
                 return tp(sender, args);
+            case "settings":
+                return settings(sender);
             default:
                 return false;
         }
@@ -235,6 +237,18 @@ public final class FeatureCommandHandler implements CommandExecutor, TabComplete
         }
         boolean on = plugin.teleportManager().toggleAuto((Player) sender);
         MessageUtil.send(sender, "&7Auto-accept teleports: " + (on ? "&aON" : "&cOFF"));
+        return true;
+    }
+
+    // --- Settings ----------------------------------------------------------
+
+    private boolean settings(CommandSender sender) {
+        if (!(sender instanceof Player)) {
+            MessageUtil.send(sender, "&cOnly players can open settings.");
+            return true;
+        }
+        Player player = (Player) sender;
+        new com.lumen.essentials.settings.SettingsMenu(plugin, player).open(player);
         return true;
     }
 

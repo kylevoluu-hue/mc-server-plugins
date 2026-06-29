@@ -49,6 +49,12 @@ public final class TeleportManager {
     // --- Requests ----------------------------------------------------------
 
     public void sendRequest(Player requester, Player target, boolean here) {
+        // Respect the target's "block teleport requests" setting.
+        if (plugin.settingsManager().isEnabled(target.getUniqueId(),
+                com.lumen.essentials.settings.SettingType.BLOCK_TPA)) {
+            MessageUtil.send(requester, "&c" + target.getName() + " is not accepting teleport requests.");
+            return;
+        }
         int expiry = cfg().getInt("teleport.request-expiry-seconds", 60);
         TeleportRequest request = new TeleportRequest(requester.getUniqueId(),
                 requester.getName(), here, System.currentTimeMillis() + expiry * 1000L);

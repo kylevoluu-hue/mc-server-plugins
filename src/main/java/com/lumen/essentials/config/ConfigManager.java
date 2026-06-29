@@ -20,6 +20,7 @@ public final class ConfigManager {
     // Runtime data stores (written to by the plugin, not shipped defaults).
     private final ConfigFile warps;
     private final ConfigFile flags;
+    private final ConfigFile settings;
 
     public ConfigManager(Plugin plugin) {
         this.config = new ConfigFile(plugin, "config.yml");
@@ -30,6 +31,7 @@ public final class ConfigManager {
         this.features = new ConfigFile(plugin, "features.yml");
         this.warps = new ConfigFile(plugin, "warps.yml", true);
         this.flags = new ConfigFile(plugin, "flags.yml", true);
+        this.settings = new ConfigFile(plugin, "settings.yml", true);
     }
 
     public void loadAll() {
@@ -41,6 +43,7 @@ public final class ConfigManager {
         features.load();
         warps.load();
         flags.load();
+        settings.load();
     }
 
     public void reloadAll() {
@@ -52,6 +55,7 @@ public final class ConfigManager {
         features.reload();
         warps.reload();
         flags.reload();
+        settings.reload();
     }
 
     public FileConfiguration config() {
@@ -92,6 +96,14 @@ public final class ConfigManager {
 
     public void saveFlags() {
         flags.save();
+    }
+
+    public FileConfiguration settings() {
+        return settings.get();
+    }
+
+    public void saveSettings() {
+        settings.save();
     }
 
     /** Convenience accessor for a message string with a fallback. */

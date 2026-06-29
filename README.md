@@ -58,6 +58,9 @@ in a single plugin.
     kills players who log out in combat.
   - **Silk-touch spawners** — harvest mob spawners (mob type preserved) with a Silk
     Touch tool.
+  - **Personal settings menu** (`/settings`) — per-player toggles (night vision,
+    hostile-mob spawning, hide chat, block teleport requests, instant respawn, and
+    client-side preferences).
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -182,6 +185,7 @@ Standalone player-facing commands (separate from `/luac`):
 | `/tpaccept`                     | `lumen.tpa`        | Accept a pending request                     |
 | `/tpauto`                       | `lumen.tpa`        | Toggle auto-accepting requests               |
 | `/tp <player>` / `<p1> <p2>` / `<x y z>` | `lumen.tp` | Staff teleport                             |
+| `/settings`                     | `lumen.settings`   | Open the personal settings toggle menu       |
 
 Notes:
 
@@ -195,6 +199,25 @@ Notes:
   world. The search is bounded (configurable attempts) so it stays lag-friendly.
 - **Teleports** show a neon-yellow boss-bar countdown and cancel (neon-red message)
   if you move or take combat damage; per-player cooldowns are configurable.
+
+### Personal settings (`/settings`)
+
+A DonutSMP-style toggle menu (one themed icon per option, click to toggle, state
+shown in the item). Settings persist per player in `settings.yml`.
+
+**Enforced server-side:**
+
+- **Night Vision** — applies an infinite night-vision effect (fullbright-style).
+- **Hostile Mob Spawning** — cancels natural hostile spawns near you; they still
+  spawn if a nearby player allows mobs.
+- **Hide Global Chat** — removes you from global chat recipients.
+- **Teleport Requests** — blocks incoming `/tpa` / `/tpahere` to you.
+- **Instant Respawn** — respawns you immediately on death.
+
+**Stored as client-cooperative preferences** (these are inherently client-side, so
+the server persists the flag and exposes it; a companion client/resource layer
+applies the visual effect): No Explosion Particles, Fast Crystal, Team Chat, Spoof
+Coords, Hurt Cam.
 
 ### Anti-combat-log
 
@@ -229,6 +252,7 @@ in `features.yml`.
 | `lumen.tpa`        | true    | Use teleport requests                     |
 | `lumen.tp`         | op      | Staff teleport                            |
 | `lumen.silkspawner`| true    | Harvest spawners with Silk Touch          |
+| `lumen.settings`   | true    | Open the personal settings menu           |
 
 ---
 
