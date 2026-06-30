@@ -12,6 +12,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 
 import java.util.Iterator;
 
@@ -38,6 +39,13 @@ public final class SettingsListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.settingsManager().unload(event.getPlayer().getUniqueId());
+    }
+
+    /** Death clears potion effects, so re-apply night vision a tick after respawn. */
+    @EventHandler
+    public void onRespawn(PlayerRespawnEvent event) {
+        plugin.getServer().getScheduler().runTaskLater(plugin,
+                () -> plugin.settingsManager().applyNightVision(event.getPlayer()), 2L);
     }
 
     /** Hide Global Chat: drop opted-out players from the recipient set. */

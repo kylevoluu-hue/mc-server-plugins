@@ -135,7 +135,7 @@ public final class KitFactory {
         give(p, 2, e(e(it("BOW"), 3, "power"), 3, "unbreaking"));
         give(p, 3, e(e(it("DIAMOND_AXE"), 3, "sharp"), 3, "unbreaking"));
         give(p, 4, it("GOLDEN_APPLE", 24));
-        give(p, 5, named(it("PLAYER_HEAD", 6, "GOLDEN_APPLE"), "&6Golden Head"));
+        give(p, 5, it("GOLDEN_APPLE", 6));
         give(p, 6, it("WATER_BUCKET", 1));
         give(p, 7, it("LAVA_BUCKET", 1));
         give(p, 8, it("COBBLESTONE", 64));

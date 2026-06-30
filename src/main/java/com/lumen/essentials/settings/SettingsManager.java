@@ -19,7 +19,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class SettingsManager {
 
-    private static final int NIGHT_VISION_DURATION = 1_000_000; // ticks, refreshed periodically
+    // Effectively infinite (~3.4 years of ticks). Re-applied on join/respawn and by the
+    // refresh task so it survives deaths (which clear potion effects) without flashing.
+    private static final int NIGHT_VISION_DURATION = Integer.MAX_VALUE;
 
     private final LumenEssentials plugin;
     private final Map<UUID, EnumMap<SettingType, Boolean>> cache = new ConcurrentHashMap<>();
@@ -84,6 +86,11 @@ public final class SettingsManager {
         FileConfiguration cfg = plugin.configManager().settings();
         cfg.set("players." + uuid + "." + type.key(), value);
         plugin.configManager().saveSettings();
+    }
+
+    /** Re-applies night vision (e.g. after respawn, which clears potion effects). */
+    public void applyNightVision(Player player) {
+        apply(player, SettingType.NIGHT_VISION);
     }
 
     /** Applies the live server-side effect of a setting (currently night vision). */
