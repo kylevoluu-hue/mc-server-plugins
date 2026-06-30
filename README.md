@@ -65,10 +65,10 @@ in a single plugin.
     rarity-tiered **crates** with weighted rewards, and spend Coins in the
     **`/merchant`** shop. Fully config-driven with many setup commands.
   - **Dueling** (`/duel`) — PvP-Club-style: 1v1/2v2/4v4/8v8 modes, a kit menu
-    (Vanilla, SMP, Sword, Axe, Crystal, UHC, Gapple, Diamond, Netherite, Wild, and 3
-    Custom slots), a matchmaking **queue** with "Match Found", auto-generated 100×100
-    arenas, best-of rounds, weather/time, full inventory save/restore, `/leave` and
-    disconnect forfeits, and a **Duel Wins** stat.
+    (Sword, Axe, UHC, Pot, NethPot, NethOP, SMP, Crystal, Mace, SpearMace, Creeper,
+    Vanilla, Wild, and 3 Custom slots), a matchmaking **queue** with "Match Found",
+    auto-generated 100×100 arenas, best-of rounds, weather/time, full inventory
+    save/restore, `/leave` and disconnect forfeits, and a **Duel Wins** stat.
 - **Developer API** plus cancellable Bukkit events.
 - **Asynchronous, batched logging** that never blocks the main thread.
 
@@ -248,9 +248,15 @@ Coords, Hurt Cam.
 **No setup required** — arenas are generated automatically.
 
 **Queue matchmaking:** `/duel` opens a menu of modes — **1v1, 2v2, 4v4, 8v8**.
-Picking a mode opens the **kit picker** (Vanilla, SMP, Sword, Axe, Crystal, UHC,
-Gapple, Diamond, Netherite, **Wild**, and **Custom 1/2/3**). Clicking a kit queues you;
-when the queue fills, everyone sees **"Match Found"** and is sent to an arena.
+Picking a mode opens the **kit picker** (Sword, Axe, UHC, Pot, NethPot, NethOP, SMP,
+Crystal, Mace, SpearMace, Creeper, Vanilla, **Wild**, and **Custom 1/2/3**). Clicking a
+kit queues you; when the queue fills, everyone sees **"Match Found"** and is sent to an
+arena.
+
+Kits are PvP-Club-inspired defaults defined in `KitFactory` (edit to taste). Global
+duel rules: inventory and effects are cleared, health/food/saturation are set to full,
+all kit gear is **unbreakable** (no durability loss), there are **no item drops** (deaths
+are intercepted), and **UHC disables natural regeneration** for the match.
 
 **Direct challenge:** `/duel <player>` opens a setup menu (kit, best-of rounds,
 weather, time) and sends a 1v1 challenge; the target runs `/duelaccept`.

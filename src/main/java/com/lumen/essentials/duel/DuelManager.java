@@ -174,6 +174,9 @@ public final class DuelManager {
                 default: world.setStorm(false); world.setThundering(false); break;
             }
             world.setTime(match.settings().time() == DuelSettings.Time.NIGHT ? 18000L : 1000L);
+            // Per-kit rule: UHC disables natural regeneration.
+            boolean uhc = "uhc".equalsIgnoreCase(match.settings().kit());
+            world.setGameRuleValue("naturalRegeneration", uhc ? "false" : "true");
         } catch (Throwable ignored) {
             // ignore
         }

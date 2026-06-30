@@ -35,6 +35,7 @@ final class DuelUtil {
         }
         try {
             player.setFoodLevel(20);
+            player.setSaturation(20f);
             player.setExp(0f);
             player.setLevel(0);
             player.setFireTicks(0);
