@@ -105,6 +105,12 @@ public final class AntiXrayManager {
             plugin.alertManager().notifyStaff(String.format(
                     "&eXray suspicion&7: &f%s &7score &c%.1f &7(last: %s unexposed=%s)",
                     player.getName(), score, type.name(), !exposed));
+            double xrayFlag = plugin.configManager().config()
+                    .getDouble("auto-flag.xray-suspicion-threshold", 20.0D);
+            if (xrayFlag > 0 && score >= xrayFlag) {
+                plugin.flagManager().autoFlag(player,
+                        "Auto: xray suspicion " + String.format("%.1f", score));
+            }
             // Soft-reset so we alert again only after further accumulation.
             data.addSuspicion(SUSPICION_KEY, -alertSuspicion / 2.0D);
         }

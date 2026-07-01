@@ -25,7 +25,7 @@ public final class ArenaManager {
     private static final int SIZE = 100;        // arena interior is 100x100
     private static final int TILE = 256;        // spacing between arenas
     private static final int FLOOR_Y = 100;     // platform height
-    private static final int WALL_HEIGHT = 6;
+    private static final int WALL_HEIGHT = 12;  // vertical fighting room before the roof
     private static final int GRID = 16;         // up to 16x16 = 256 concurrent arenas
 
     private final LumenEssentials plugin;
@@ -105,17 +105,21 @@ public final class ArenaManager {
         World w = world();
         int[] origin = tileOrigin(tile);
         int half = SIZE / 2;
-        // Indestructible shell: bedrock floor + invisible barrier walls, so the arena
-        // can never be broken out of or griefed regardless of the breakable setting.
+        int roofY = FLOOR_Y + WALL_HEIGHT + 1;
+        // Fully-enclosed indestructible shell so nobody can fly/pearl out: bedrock floor,
+        // invisible barrier walls AND a barrier roof. The interior is left as-is (the flat
+        // world is already air up here), which keeps arena generation cheap.
         Material floor = resolve("BEDROCK", "OBSIDIAN", "STONE");
         Material wall = resolve("BARRIER", "GLASS", "STONE");
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
                 w.getBlockAt(origin[0] + dx, FLOOR_Y, origin[1] + dz).setType(floor, false);
+                w.getBlockAt(origin[0] + dx, roofY, origin[1] + dz).setType(wall, false);
                 boolean edge = dx == -half || dx == half || dz == -half || dz == half;
-                for (int dy = 1; dy <= WALL_HEIGHT; dy++) {
-                    Material m = edge ? wall : Material.AIR;
-                    w.getBlockAt(origin[0] + dx, FLOOR_Y + dy, origin[1] + dz).setType(m, false);
+                if (edge) {
+                    for (int dy = 1; dy <= WALL_HEIGHT; dy++) {
+                        w.getBlockAt(origin[0] + dx, FLOOR_Y + dy, origin[1] + dz).setType(wall, false);
+                    }
                 }
             }
         }

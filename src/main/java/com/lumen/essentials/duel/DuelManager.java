@@ -191,6 +191,8 @@ public final class DuelManager {
             endMatch(match, match.teamA().isEmpty() ? 1 : 0);
             return;
         }
+        // Repair the arena between rounds: remove any blocks placed last round.
+        cleanupPlacedBlocks(match);
         match.resetAlive();
         match.setState(DuelMatch.State.COUNTDOWN);
 

@@ -48,7 +48,9 @@ in a single plugin.
 - **Staff alerts & debug/verbose** subscriptions.
 - **Player profiling**: per-player violations, suspicion scores and client brand.
 - **SMP feature suite**:
-  - Manual **flags** (`/flag`, `/flaglist`) with a player-head GUI and reasons.
+  - **Flags** (`/flag`, `/flaglist`) with a player-head GUI and reasons, plus
+    **auto-flag**: the anti-cheat/anti-xray automatically flags suspicious players for
+    staff review (configurable thresholds in `config.yml`).
   - **Stats** GUI (`/stats`) — mob kills, player kills, deaths, playtime.
   - **Warps** (`/warp`, `/sswarp`) — operator-set named destinations.
   - **Random teleport** (`/rtp`) with a lag-safe bounded safe-location search.
@@ -262,17 +264,17 @@ are intercepted), and **UHC disables natural regeneration** for the match.
 weather, time) and sends a 1v1 challenge; the target runs `/duelaccept`.
 
 **Arenas:** the plugin auto-creates a dedicated flat world (`lumen_duels`) and builds a
-fresh **100×100 arena** per match on a free tile with an **indestructible shell**
-(bedrock floor + invisible **barrier** walls), releasing it when the match ends — no
-per-match world creation, no lag, no operator setup. Weather and time are applied per
-match.
+fresh **100×100 arena** per match on a free tile with a **fully-enclosed indestructible
+shell** — bedrock floor plus invisible **barrier walls and roof** — so nobody can fly,
+pearl, or elytra out. It's released when the match ends: no per-match world creation, no
+lag, no operator setup. Weather and time are applied per match.
 
 - **Unbreakable by default:** players can't break blocks inside the arena. Set
   `duels.arena.breakable: true` in `features.yml` to allow breaking.
 - **Explosive kits** (Crystal, Creeper, NethOP) are automatically made breakable so
   crystals/obsidian/creepers work (`force-breakable-for-explosive-kits`).
-- **Every block a player places is removed when the match ends**, so arenas are always
-  left pristine for the next match.
+- **The arena auto-repairs every round and at match end** — every block a player places
+  is removed, so each round and match starts pristine.
 
 **Kits:**
 

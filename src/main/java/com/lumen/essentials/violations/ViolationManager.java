@@ -91,6 +91,14 @@ public final class ViolationManager {
             plugin.alertManager().alert(violation);
         }
 
+        // Auto-flag once a player's violation level for a check crosses the threshold.
+        double autoFlagThreshold = plugin.configManager().config()
+                .getDouble("auto-flag.violation-threshold", 15.0D);
+        if (autoFlagThreshold > 0 && vl >= autoFlagThreshold) {
+            plugin.flagManager().autoFlag(player,
+                    "Auto: " + check.name() + " (vl " + String.format("%.1f", vl) + ")");
+        }
+
         if (vl >= settings.punishmentThreshold()) {
             PunishmentEvent punishEvent = new PunishmentEvent(player, violation);
             plugin.getServer().getPluginManager().callEvent(punishEvent);

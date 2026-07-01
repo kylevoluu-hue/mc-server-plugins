@@ -10,6 +10,18 @@ logging:
   log-client-brand: true
 
 # ---------------------------------------------------------------------
+# Auto-flag: automatically add players to the /flaglist (staff flag menu)
+# when the anti-cheat gets suspicious, so moderators can review them later.
+# Set a threshold to 0 to disable that source.
+# ---------------------------------------------------------------------
+auto-flag:
+  enabled: true
+  # Flag when any check's violation level reaches this value.
+  violation-threshold: 15
+  # Flag when a player's xray suspicion score reaches this value.
+  xray-suspicion-threshold: 20
+
+# ---------------------------------------------------------------------
 # Anti-Xray (behavioral / forensic layer).
 #
 # This module logs valuable-ore discoveries, builds a suspicion score and

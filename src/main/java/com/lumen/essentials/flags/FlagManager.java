@@ -81,6 +81,22 @@ public final class FlagManager {
         return flag;
     }
 
+    /**
+     * Automatically flags a player (e.g. from the anti-cheat) if auto-flagging is
+     * enabled and they are not already flagged. Notifies staff.
+     */
+    public void autoFlag(Player target, String reason) {
+        if (target == null
+                || !plugin.configManager().config().getBoolean("auto-flag.enabled", true)) {
+            return;
+        }
+        if (isFlagged(target.getUniqueId())) {
+            return; // already flagged; don't spam
+        }
+        add(target, "AutoFlag", reason);
+        plugin.alertManager().notifyStaff("&cAuto-Flag&7: &f" + target.getName() + " &7- " + reason);
+    }
+
     public boolean remove(UUID uuid) {
         boolean removed = flags.remove(uuid) != null;
         if (removed) {
