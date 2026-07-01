@@ -105,8 +105,10 @@ public final class ArenaManager {
         World w = world();
         int[] origin = tileOrigin(tile);
         int half = SIZE / 2;
-        Material floor = resolve("SMOOTH_STONE", "STONE");
-        Material wall = resolve("GLASS", "STONE");
+        // Indestructible shell: bedrock floor + invisible barrier walls, so the arena
+        // can never be broken out of or griefed regardless of the breakable setting.
+        Material floor = resolve("BEDROCK", "OBSIDIAN", "STONE");
+        Material wall = resolve("BARRIER", "GLASS", "STONE");
         for (int dx = -half; dx <= half; dx++) {
             for (int dz = -half; dz <= half; dz++) {
                 w.getBlockAt(origin[0] + dx, FLOOR_Y, origin[1] + dz).setType(floor, false);
@@ -153,10 +155,15 @@ public final class ArenaManager {
         return new Location(world(), origin[0] + 0.5, FLOOR_Y + 1, origin[1] + 0.5);
     }
 
-    private Material resolve(String primary, String fallback) {
+    private Material resolve(String primary, String... fallbacks) {
         Material m = plugin.versionManager().adapter().resolveMaterial(primary);
         if (m == null) {
-            m = plugin.versionManager().adapter().resolveMaterial(fallback);
+            for (String alt : fallbacks) {
+                m = plugin.versionManager().adapter().resolveMaterial(alt);
+                if (m != null) {
+                    break;
+                }
+            }
         }
         return m != null ? m : Material.STONE;
     }

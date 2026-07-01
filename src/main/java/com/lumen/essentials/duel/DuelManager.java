@@ -4,10 +4,13 @@ import com.lumen.essentials.LumenEssentials;
 import com.lumen.essentials.utilities.MessageUtil;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -150,6 +153,7 @@ public final class DuelManager {
             names.put(uuid, p == null ? "?" : p.getName());
         }
         DuelMatch match = new DuelMatch(mode, settings, tile, teamA, teamB, names);
+        match.setBreakable(resolveBreakable(settings.kit()));
         for (UUID uuid : match.allPlayers()) {
             Player p = plugin.getServer().getPlayer(uuid);
             if (p != null) {
@@ -227,6 +231,8 @@ public final class DuelManager {
         } catch (Throwable ignored) {
             // ignore
         }
+        // Exempt from anti-cheat during the match (kits grant speed/elytra/etc.).
+        plugin.playerDataManager().getOrCreate(player).setExempt(true);
         if (spawn != null) {
             player.teleport(spawn);
         }
@@ -306,13 +312,31 @@ public final class DuelManager {
         for (UUID winner : match.team(winnerTeam)) {
             addWin(winner);
         }
+        cleanupPlacedBlocks(match);
         arenaManager.release(match.arenaTile());
         broadcast(match, "&6" + match.teamName(winnerTeam) + " &awon the duel!");
         saveData();
     }
 
+    /** Removes every block placed during the match so the arena is left pristine. */
+    private void cleanupPlacedBlocks(DuelMatch match) {
+        for (Location loc : match.placedBlocks()) {
+            try {
+                if (loc.getWorld() != null) {
+                    loc.getBlock().setType(Material.AIR, false);
+                }
+            } catch (Throwable ignored) {
+                // ignore
+            }
+        }
+        match.placedBlocks().clear();
+    }
+
     private void restore(DuelMatch match, UUID uuid) {
         Player player = plugin.getServer().getPlayer(uuid);
+        if (player != null) {
+            plugin.playerDataManager().getOrCreate(player).setExempt(false);
+        }
         PlayerState saved = match.saved(uuid);
         if (player != null && saved != null) {
             saved.restore(player);
@@ -351,6 +375,43 @@ public final class DuelManager {
     public void handleQuit(UUID uuid) {
         requests.remove(uuid);
         forfeit(uuid);
+    }
+
+    // --- Arena block rules -------------------------------------------------
+
+    /** Records a dueler's placed block (always cleaned up when the match ends). */
+    public void handleBlockPlace(BlockPlaceEvent event) {
+        DuelMatch match = byPlayer.get(event.getPlayer().getUniqueId());
+        if (match != null) {
+            match.trackPlaced(event.getBlock().getLocation());
+        }
+    }
+
+    /** Cancels block breaking in unbreakable arenas; allows it (tracked) when breakable. */
+    public void handleBlockBreak(BlockBreakEvent event) {
+        DuelMatch match = byPlayer.get(event.getPlayer().getUniqueId());
+        if (match != null && !match.breakable()) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** True if this player is currently in a duel (used to route block events). */
+    public boolean inMatch(UUID uuid) {
+        return byPlayer.containsKey(uuid);
+    }
+
+    private boolean resolveBreakable(String kit) {
+        FileConfiguration cfg = plugin.configManager().features();
+        if (cfg.getBoolean("duels.arena.force-breakable-for-explosive-kits", true)
+                && isExplosiveKit(kit)) {
+            return true; // crystal/creeper/nethop need block interaction
+        }
+        return cfg.getBoolean("duels.arena.breakable", false);
+    }
+
+    private boolean isExplosiveKit(String kit) {
+        String k = kit == null ? "" : kit.toLowerCase(java.util.Locale.ROOT).replace(" ", "");
+        return k.equals("crystal") || k.equals("creeper") || k.equals("nethop");
     }
 
     public void shutdown() {

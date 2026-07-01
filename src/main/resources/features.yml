@@ -57,6 +57,18 @@ teleport:
   message-request-received: "&e{player} &7wants to teleport to you. &a/tpaccept&7."
 
 # ---------------------------------------------------------------------
+# Dueling arenas. Arenas are auto-generated with an indestructible shell
+# (bedrock floor + barrier walls). 'breakable' controls whether players may
+# break blocks inside the arena; either way, every block a player PLACES is
+# removed when the match ends. Explosive kits (crystal/creeper/nethop) are
+# forced breakable so their block interactions work.
+# ---------------------------------------------------------------------
+duels:
+  arena:
+    breakable: false
+    force-breakable-for-explosive-kits: true
+
+# ---------------------------------------------------------------------
 # Silk-touch spawners. Mining a mob spawner with a Silk Touch tool drops a
 # spawner item that remembers its mob type; placing it restores that mob.
 # Requires the lumen.silkspawner permission (default: true).

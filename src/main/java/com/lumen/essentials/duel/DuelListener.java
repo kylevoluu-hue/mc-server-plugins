@@ -4,6 +4,8 @@ import com.lumen.essentials.LumenEssentials;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -27,5 +29,15 @@ public final class DuelListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.duelManager().handleQuit(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBreak(BlockBreakEvent event) {
+        plugin.duelManager().handleBlockBreak(event);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlace(BlockPlaceEvent event) {
+        plugin.duelManager().handleBlockPlace(event);
     }
 }

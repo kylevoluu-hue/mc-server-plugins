@@ -1,5 +1,7 @@
 package com.lumen.essentials.duel;
 
+import org.bukkit.Location;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** Mutable state of a single (possibly team) duel. Team 0 = A, team 1 = B. */
 public final class DuelMatch {
@@ -23,6 +26,8 @@ public final class DuelMatch {
     private final Set<UUID> aliveA = new HashSet<>();
     private final Set<UUID> aliveB = new HashSet<>();
 
+    private final Set<Location> placedBlocks = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private boolean breakable;
     private int scoreA;
     private int scoreB;
     private int round = 1;
@@ -150,5 +155,22 @@ public final class DuelMatch {
 
     public PlayerState saved(UUID uuid) {
         return saved.get(uuid);
+    }
+
+    public boolean breakable() {
+        return breakable;
+    }
+
+    public void setBreakable(boolean breakable) {
+        this.breakable = breakable;
+    }
+
+    /** Records a block a dueler placed, for cleanup when the match ends. */
+    public void trackPlaced(Location location) {
+        placedBlocks.add(location);
+    }
+
+    public Set<Location> placedBlocks() {
+        return placedBlocks;
     }
 }

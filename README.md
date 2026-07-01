@@ -262,9 +262,17 @@ are intercepted), and **UHC disables natural regeneration** for the match.
 weather, time) and sends a 1v1 challenge; the target runs `/duelaccept`.
 
 **Arenas:** the plugin auto-creates a dedicated flat world (`lumen_duels`) and builds a
-fresh **100×100 walled arena** per match on a free tile, releasing it when the match
-ends — no per-match world creation, no lag, no operator setup. Weather and time are
-applied per match.
+fresh **100×100 arena** per match on a free tile with an **indestructible shell**
+(bedrock floor + invisible **barrier** walls), releasing it when the match ends — no
+per-match world creation, no lag, no operator setup. Weather and time are applied per
+match.
+
+- **Unbreakable by default:** players can't break blocks inside the arena. Set
+  `duels.arena.breakable: true` in `features.yml` to allow breaking.
+- **Explosive kits** (Crystal, Creeper, NethOP) are automatically made breakable so
+  crystals/obsidian/creepers work (`force-breakable-for-explosive-kits`).
+- **Every block a player places is removed when the match ends**, so arenas are always
+  left pristine for the next match.
 
 **Kits:**
 
