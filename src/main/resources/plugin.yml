@@ -116,6 +116,10 @@ commands:
     description: Ban (and kick) a player.
     usage: /punish <player> <reason> [duration] [ip-ban]
     permission: lumen.punish
+  unpunish:
+    description: Lift a ban.
+    usage: /unpunish <player> | ip <address>
+    permission: lumen.unpunish
   kick:
     description: Kick a player.
     usage: /kick <player> [reason]
@@ -193,6 +197,9 @@ permissions:
     default: true
   lumen.punish:
     description: Ban and IP-ban players.
+    default: op
+  lumen.unpunish:
+    description: Lift bans.
     default: op
   lumen.kick:
     description: Kick players.

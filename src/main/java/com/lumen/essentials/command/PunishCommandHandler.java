@@ -50,7 +50,52 @@ public final class PunishCommandHandler implements CommandExecutor, TabCompleter
         if (command.getName().equalsIgnoreCase("kick")) {
             return kick(sender, args);
         }
+        if (command.getName().equalsIgnoreCase("unpunish")) {
+            return unpunish(sender, args);
+        }
         return punish(sender, args);
+    }
+
+    // --- /unpunish ---------------------------------------------------------
+
+    private boolean unpunish(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("lumen.unpunish")) {
+            MessageUtil.send(sender, "&cNo permission.");
+            return true;
+        }
+        if (args.length < 1) {
+            MessageUtil.send(sender, "&cUsage: /unpunish <player> [ip-ban]  |  /unpunish ip <address>");
+            return true;
+        }
+        // /unpunish ip <address>  -> lift an IP ban directly.
+        if (args[0].equalsIgnoreCase("ip") && args.length >= 2) {
+            try {
+                Bukkit.getBanList(BanList.Type.IP).pardon(args[1]);
+                MessageUtil.send(sender, "&aLifted IP ban for &f" + args[1] + "&a.");
+            } catch (Throwable t) {
+                MessageUtil.send(sender, "&cFailed: " + t.getMessage());
+            }
+            return true;
+        }
+
+        String name = args[0];
+        boolean alsoIp = args.length >= 2 && (args[1].equalsIgnoreCase("ip-ban") || args[1].equalsIgnoreCase("ip"));
+        try {
+            Bukkit.getBanList(BanList.Type.NAME).pardon(name);
+        } catch (Throwable t) {
+            MessageUtil.send(sender, "&cFailed to unban: " + t.getMessage());
+            return true;
+        }
+        if (alsoIp) {
+            // We can only lift an IP ban if we know the address; online players can't be
+            // banned, so point the operator at the explicit form.
+            MessageUtil.send(sender, "&7For IP unbans use &f/unpunish ip <address>&7 "
+                    + "(the address is shown when you ran /punish ... ip-ban).");
+        }
+        MessageUtil.send(sender, "&aUnbanned &f" + name + "&a.");
+        plugin.alertManager().notifyStaff("&aPunish&7: &f" + sender.getName()
+                + " &7unbanned &f" + name);
+        return true;
     }
 
     // --- /punish -----------------------------------------------------------
@@ -244,6 +289,11 @@ public final class PunishCommandHandler implements CommandExecutor, TabCompleter
                                       @NotNull String alias, @NotNull String[] args) {
         boolean isPunish = command.getName().equalsIgnoreCase("punish");
         if (args.length == 1) {
+            if (command.getName().equalsIgnoreCase("unpunish")) {
+                List<String> opts = onlineNames();
+                opts.add("ip");
+                return prefix(opts, args[0]);
+            }
             return prefix(onlineNames(), args[0]);
         }
         if (isPunish && args.length == 2) {

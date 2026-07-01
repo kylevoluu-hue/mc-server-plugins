@@ -211,6 +211,7 @@ Standalone player-facing commands (separate from `/luac`):
 | `/duelaccept`                   | `lumen.duel`       | Accept a pending challenge                   |
 | `/leave`                        | `lumen.duel`       | Leave your match or queue (forfeit)          |
 | `/punish <player> <reason> [duration] [ip-ban]` | `lumen.punish` | Ban (and kick); premade or custom reason/duration |
+| `/unpunish <player>` / `ip <address>` | `lumen.unpunish` | Lift a ban (name or IP)                |
 | `/kick <player> [reason]`       | `lumen.kick`       | Kick a player                                |
 
 Notes:
@@ -312,6 +313,8 @@ online), using Bukkit's ban lists so the server enforces it on join.
 - **IP-ban toggle**: append `ip-ban` to also ban the IP so alt accounts from that
   address can't join. `/punish Steve cheating 30d ip-ban`.
 - `/kick <player> [reason]` just kicks.
+- **Unban** with `/unpunish <player>` (name) or `/unpunish ip <address>` (IP). Vanilla
+  `/pardon` and `/pardon-ip` also work, since these use Bukkit's ban lists.
 
 ### Anti-combat-log
 
@@ -390,6 +393,7 @@ Admin commands: `/coins give|take|set <player> <amount>`, `/key give|take|set <p
 | `lumen.afkzone.admin`| op    | Create/manage AFK zones                   |
 | `lumen.duel`       | true    | Use the dueling system                    |
 | `lumen.punish`     | op      | Ban / IP-ban players                       |
+| `lumen.unpunish`   | op      | Lift bans                                  |
 | `lumen.kick`       | op      | Kick players                              |
 
 ---
