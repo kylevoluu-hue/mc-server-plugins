@@ -1,6 +1,7 @@
 package com.lumen.essentials.duel;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +27,9 @@ public final class DuelMatch {
     private final Set<UUID> aliveA = new HashSet<>();
     private final Set<UUID> aliveB = new HashSet<>();
 
-    private final Set<Location> placedBlocks = java.util.Collections.newSetFromMap(new ConcurrentHashMap<>());
+    // Every block a dueler changed (placed or broke) -> its original material, so the
+    // arena can be repaired exactly each round/match.
+    private final Map<Location, Material> changedBlocks = new ConcurrentHashMap<>();
     private boolean breakable;
     private int scoreA;
     private int scoreB;
@@ -165,12 +168,12 @@ public final class DuelMatch {
         this.breakable = breakable;
     }
 
-    /** Records a block a dueler placed, for cleanup when the match ends. */
-    public void trackPlaced(Location location) {
-        placedBlocks.add(location);
+    /** Records a block change (only the first time per location keeps the true original). */
+    public void trackChange(Location location, Material original) {
+        changedBlocks.putIfAbsent(location, original == null ? Material.AIR : original);
     }
 
-    public Set<Location> placedBlocks() {
-        return placedBlocks;
+    public Map<Location, Material> changedBlocks() {
+        return changedBlocks;
     }
 }

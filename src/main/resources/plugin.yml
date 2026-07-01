@@ -112,6 +112,14 @@ commands:
     description: Leave your current match or queue.
     usage: /leave
     permission: lumen.duel
+  punish:
+    description: Ban (and kick) a player.
+    usage: /punish <player> <reason> [duration] [ip-ban]
+    permission: lumen.punish
+  kick:
+    description: Kick a player.
+    usage: /kick <player> [reason]
+    permission: lumen.kick
 
 permissions:
   luac.admin:
@@ -183,3 +191,9 @@ permissions:
   lumen.duel:
     description: Use the dueling system.
     default: true
+  lumen.punish:
+    description: Ban and IP-ban players.
+    default: op
+  lumen.kick:
+    description: Kick players.
+    default: op

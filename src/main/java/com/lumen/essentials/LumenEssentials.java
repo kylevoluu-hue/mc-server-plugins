@@ -153,6 +153,9 @@ public final class LumenEssentials extends JavaPlugin {
         registerEconomyCommands();
         DuelCommandHandler duelCommands = new DuelCommandHandler(this);
         bind(new String[]{"duel", "duelaccept", "leave"}, duelCommands, duelCommands);
+        com.lumen.essentials.command.PunishCommandHandler punishCommands =
+                new com.lumen.essentials.command.PunishCommandHandler(this);
+        bind(new String[]{"punish", "kick"}, punishCommands, punishCommands);
 
         getLogger().info("Lumen Essentials enabled (" + checkManager.all().size()
                 + " checks, adapter " + versionManager.adapter().name() + ").");

@@ -210,6 +210,8 @@ Standalone player-facing commands (separate from `/luac`):
 | `/duel savekit [1-3]`           | `lumen.duel`       | Save your inventory to a Custom kit slot     |
 | `/duelaccept`                   | `lumen.duel`       | Accept a pending challenge                   |
 | `/leave`                        | `lumen.duel`       | Leave your match or queue (forfeit)          |
+| `/punish <player> <reason> [duration] [ip-ban]` | `lumen.punish` | Ban (and kick); premade or custom reason/duration |
+| `/kick <player> [reason]`       | `lumen.kick`       | Kick a player                                |
 
 Notes:
 
@@ -264,17 +266,22 @@ are intercepted), and **UHC disables natural regeneration** for the match.
 weather, time) and sends a 1v1 challenge; the target runs `/duelaccept`.
 
 **Arenas:** the plugin auto-creates a dedicated flat world (`lumen_duels`) and builds a
-fresh **100×100 arena** per match on a free tile with a **fully-enclosed indestructible
-shell** — bedrock floor plus invisible **barrier walls and roof** — so nobody can fly,
-pearl, or elytra out. It's released when the match ends: no per-match world creation, no
-lag, no operator setup. Weather and time are applied per match.
+fresh arena per match on a free tile with a **fully-enclosed indestructible shell** — a
+**layered grass/stone/bedrock floor** plus invisible **barrier walls and roof** (tall
+fighting room) — so nobody can fly, pearl, or elytra out. **Arena size scales with the
+kit:** Crystal/NethOP get **large** arenas, close-quarters kits (UHC, Pot, Creeper) get
+**small** ones, and pearl/mobility kits get **medium**. Arenas are released when the
+match ends: no per-match world creation, no lag, no operator setup. Weather and time are
+applied per match.
 
 - **Unbreakable by default:** players can't break blocks inside the arena. Set
   `duels.arena.breakable: true` in `features.yml` to allow breaking.
 - **Explosive kits** (Crystal, Creeper, NethOP) are automatically made breakable so
   crystals/obsidian/creepers work (`force-breakable-for-explosive-kits`).
+- Only certain styles can break blocks; **explosive kits** (Crystal, Creeper, NethOP)
+  are automatically breakable so crystals/obsidian/creepers work.
 - **The arena auto-repairs every round and at match end** — every block a player places
-  is removed, so each round and match starts pristine.
+  *or breaks* is restored to its original, so each round and match starts pristine.
 
 **Kits:**
 
@@ -291,6 +298,20 @@ lag, no operator setup. Weather and time are applied per match.
   `/leave`, or disconnect. Leaving/disconnecting **forfeits**; if it empties a team,
   the other team wins.
 - Match wins increment a persistent **Duel Wins** counter, shown in `/stats`.
+
+### Punishments (`/punish`, `/kick`)
+
+`/punish <player> <reason> [duration] [ip-ban]` bans a player (and kicks them if
+online), using Bukkit's ban lists so the server enforces it on join.
+
+- **Premade reasons** live in `punishments.yml` (`punish.reasons`) and each carry a
+  default ban length — e.g. `cheating` (30d), `hacking` (permanent), `xray` (14d),
+  `spam` (6h), `toxicity` (3d). Just `/punish Steve cheating`.
+- **Custom/override duration**: append one — `30m`, `1h`, `6h`, `1d`, `3d`, `7d`,
+  `14d`, `30d`, or `permanent` (tab-completed). `/punish Steve using x-ray 14d`.
+- **IP-ban toggle**: append `ip-ban` to also ban the IP so alt accounts from that
+  address can't join. `/punish Steve cheating 30d ip-ban`.
+- `/kick <player> [reason]` just kicks.
 
 ### Anti-combat-log
 
@@ -368,6 +389,8 @@ Admin commands: `/coins give|take|set <player> <amount>`, `/key give|take|set <p
 | `lumen.economy.admin`| op    | Manage coins/keys, reload economy         |
 | `lumen.afkzone.admin`| op    | Create/manage AFK zones                   |
 | `lumen.duel`       | true    | Use the dueling system                    |
+| `lumen.punish`     | op      | Ban / IP-ban players                       |
+| `lumen.kick`       | op      | Kick players                              |
 
 ---
 

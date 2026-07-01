@@ -142,7 +142,7 @@ public final class DuelManager {
 
     /** Starts a match between two pre-formed teams. Used by both queue and challenge. */
     public void startMatch(DuelMode mode, DuelSettings settings, List<UUID> teamA, List<UUID> teamB) {
-        Integer tile = arenaManager.allocate();
+        Integer tile = arenaManager.allocate(sizeForKit(settings.kit()));
         if (tile == null) {
             messageAll(teamA, teamB, "&cNo duel arena is available right now, try again.");
             return;
@@ -191,8 +191,8 @@ public final class DuelManager {
             endMatch(match, match.teamA().isEmpty() ? 1 : 0);
             return;
         }
-        // Repair the arena between rounds: remove any blocks placed last round.
-        cleanupPlacedBlocks(match);
+        // Repair the arena between rounds: restore any blocks changed last round.
+        repairArena(match);
         match.resetAlive();
         match.setState(DuelMatch.State.COUNTDOWN);
 
@@ -314,24 +314,41 @@ public final class DuelManager {
         for (UUID winner : match.team(winnerTeam)) {
             addWin(winner);
         }
-        cleanupPlacedBlocks(match);
+        repairArena(match);
         arenaManager.release(match.arenaTile());
         broadcast(match, "&6" + match.teamName(winnerTeam) + " &awon the duel!");
         saveData();
     }
 
-    /** Removes every block placed during the match so the arena is left pristine. */
-    private void cleanupPlacedBlocks(DuelMatch match) {
-        for (Location loc : match.placedBlocks()) {
+    /** Restores every block a dueler changed to its original, leaving the arena pristine. */
+    private void repairArena(DuelMatch match) {
+        for (Map.Entry<Location, Material> entry : match.changedBlocks().entrySet()) {
+            Location loc = entry.getKey();
             try {
                 if (loc.getWorld() != null) {
-                    loc.getBlock().setType(Material.AIR, false);
+                    loc.getBlock().setType(entry.getValue(), false);
                 }
             } catch (Throwable ignored) {
                 // ignore
             }
         }
-        match.placedBlocks().clear();
+        match.changedBlocks().clear();
+    }
+
+    /** Bigger arenas for mobile/crystal kits; smaller for close-quarters kits. */
+    private int sizeForKit(String kit) {
+        String k = kit == null ? "" : kit.toLowerCase(java.util.Locale.ROOT).replace(" ", "");
+        switch (k) {
+            case "crystal":
+            case "nethop":
+                return ArenaManager.LARGE;    // crystal / lots of pearls + mobility
+            case "uhc":
+            case "pot":
+            case "creeper":
+                return ArenaManager.SMALL;    // close-quarters, no fast transport
+            default:
+                return ArenaManager.MEDIUM;   // pearl/mobility kits (sword, smp, mace, ...)
+        }
     }
 
     private void restore(DuelMatch match, UUID uuid) {
@@ -381,20 +398,32 @@ public final class DuelManager {
 
     // --- Arena block rules -------------------------------------------------
 
-    /** Records a dueler's placed block (always cleaned up when the match ends). */
+    /** Records a placed block (original = what it replaced) for repair when the match ends. */
     public void handleBlockPlace(BlockPlaceEvent event) {
         DuelMatch match = byPlayer.get(event.getPlayer().getUniqueId());
         if (match != null) {
-            match.trackPlaced(event.getBlock().getLocation());
+            Material original = Material.AIR;
+            try {
+                original = event.getBlockReplacedState().getType();
+            } catch (Throwable ignored) {
+                // fall back to AIR
+            }
+            match.trackChange(event.getBlock().getLocation(), original);
         }
     }
 
-    /** Cancels block breaking in unbreakable arenas; allows it (tracked) when breakable. */
+    /** Cancels breaking in unbreakable arenas; in breakable ones records + allows it. */
     public void handleBlockBreak(BlockBreakEvent event) {
         DuelMatch match = byPlayer.get(event.getPlayer().getUniqueId());
-        if (match != null && !match.breakable()) {
-            event.setCancelled(true);
+        if (match == null) {
+            return;
         }
+        if (!match.breakable()) {
+            event.setCancelled(true);
+            return;
+        }
+        // Record the broken block's original type so it is restored on repair.
+        match.trackChange(event.getBlock().getLocation(), event.getBlock().getType());
     }
 
     /** True if this player is currently in a duel (used to route block events). */

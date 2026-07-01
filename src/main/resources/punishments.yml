@@ -14,6 +14,23 @@
 default:
   - "say [Lumen] {player} reached the punishment threshold for {check} (vl {vl})."
 
+# =====================================================================
+#  Staff /punish command - premade reasons with default ban durations.
+#  Use: /punish <player> <reason> [duration] [ip-ban]
+#  duration overrides the preset; formats: 30m 1h 6h 1d 7d 30d permanent
+# =====================================================================
+punish:
+  reasons:
+    cheating: { display: "Cheating / Hacking", duration: "30d" }
+    hacking: { display: "Hacking", duration: "permanent" }
+    xray: { display: "X-Ray", duration: "14d" }
+    spam: { display: "Spamming", duration: "6h" }
+    toxicity: { display: "Toxicity", duration: "3d" }
+    advertising: { display: "Advertising", duration: "permanent" }
+    teaming: { display: "Illegal Teaming", duration: "7d" }
+    griefing: { display: "Griefing", duration: "7d" }
+    scamming: { display: "Scamming", duration: "14d" }
+
 # Per-check overrides. Examples are commented; enable what your server uses.
 actions:
   nuker:
